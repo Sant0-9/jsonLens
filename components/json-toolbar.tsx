@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Table2, FileText, Download, Trash2, GitCompare, Search } from 'lucide-react';
+import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJsonStore } from '@/store/json-store';
 import { formatBytes } from '@/lib/json-parser';
@@ -84,6 +84,14 @@ export function JsonToolbar() {
           >
             <Search className="h-4 w-4 mr-1" />
             Query
+          </Button>
+          <Button
+            variant={view === 'schema' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setView('schema')}
+          >
+            <FileType className="h-4 w-4 mr-1" />
+            Schema
           </Button>
         </div>
 
