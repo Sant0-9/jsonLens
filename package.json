@@ -11,6 +11,7 @@
   "dependencies": {
     "jmespath": "^0.16.0",
     "jsonpath-plus": "^10.3.0",
+    "mermaid": "^11.12.0",
     "next": "14.2.32",
     "next-themes": "^0.4.6",
     "react": "^18",

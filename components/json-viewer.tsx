@@ -11,6 +11,7 @@ import { RawView } from './raw-view';
 import { DiffView } from './diff-view';
 import { QueryView } from './query-view';
 import { SchemaView } from './schema-view';
+import { DiagramView } from './diagram-view';
 
 export function JsonViewer() {
   const { jsonData, error, isLoading, view, loadFromIndexedDB, fileName } = useJsonStore();
@@ -51,6 +52,7 @@ export function JsonViewer() {
         {view === 'diff' && <DiffView leftData={jsonData} leftLabel={fileName || 'Current JSON'} />}
         {view === 'query' && <QueryView data={jsonData} />}
         {view === 'schema' && <SchemaView data={jsonData} />}
+        {view === 'diagram' && <DiagramView data={jsonData} />}
       </div>
     </div>
   );
