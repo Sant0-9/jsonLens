@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { saveJsonData, getLastJsonData } from '@/lib/indexeddb';
 
 export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 export interface JsonObject {
@@ -37,6 +38,7 @@ export interface JsonState {
   clearData: () => void;
   setError: (error: JsonError | null) => void;
   setLoading: (loading: boolean) => void;
+  loadFromIndexedDB: () => Promise<void>;
 }
 
 export const useJsonStore = create<JsonState>()(
@@ -54,14 +56,30 @@ export const useJsonStore = create<JsonState>()(
       filterPath: '',
 
       // Actions
-      setJsonData: (data, raw, fileName) =>
+      setJsonData: (data, raw, fileName) => {
+        const fileSize = new Blob([raw]).size;
         set({
           jsonData: data,
           rawJson: raw,
           fileName: fileName || null,
-          fileSize: new Blob([raw]).size,
+          fileSize,
           error: null,
-        }),
+        });
+        
+        // Save to IndexedDB asynchronously
+        if (typeof window !== 'undefined') {
+          saveJsonData({
+            id: 'last-loaded',
+            jsonData: data,
+            rawJson: raw,
+            fileName: fileName || null,
+            fileSize,
+            timestamp: Date.now(),
+          }).catch((error) => {
+            console.error('Failed to save to IndexedDB:', error);
+          });
+        }
+      },
 
       setView: (view) => set({ view }),
 
@@ -83,6 +101,25 @@ export const useJsonStore = create<JsonState>()(
       setError: (error) => set({ error, isLoading: false }),
 
       setLoading: (isLoading) => set({ isLoading }),
+      
+      loadFromIndexedDB: async () => {
+        if (typeof window === 'undefined') return;
+        
+        try {
+          const lastData = await getLastJsonData();
+          if (lastData) {
+            set({
+              jsonData: lastData.jsonData as JsonValue,
+              rawJson: lastData.rawJson,
+              fileName: lastData.fileName,
+              fileSize: lastData.fileSize,
+              error: null,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load from IndexedDB:', error);
+        }
+      },
     }),
     {
       name: 'jsonlens-storage',

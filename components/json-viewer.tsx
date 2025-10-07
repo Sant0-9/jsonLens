@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from 'react';
 import { useJsonStore } from '@/store/json-store';
 import { JsonImport } from './json-import';
 import { JsonError } from './json-error';
@@ -9,7 +10,13 @@ import { TableView } from './table-view';
 import { RawView } from './raw-view';
 
 export function JsonViewer() {
-  const { jsonData, error, isLoading, view } = useJsonStore();
+  const { jsonData, error, isLoading, view, loadFromIndexedDB } = useJsonStore();
+  
+  useEffect(() => {
+    if (!jsonData && !error) {
+      loadFromIndexedDB();
+    }
+  }, [loadFromIndexedDB, jsonData, error]);
 
   if (isLoading) {
     return (
