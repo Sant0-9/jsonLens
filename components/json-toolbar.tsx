@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType, Network, Share2, BarChart2, Shuffle } from 'lucide-react';
+import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType, Network, Share2, BarChart2, Shuffle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJsonStore } from '@/store/json-store';
 import { formatBytes } from '@/lib/json-parser';
@@ -124,6 +124,14 @@ export function JsonToolbar() {
           >
             <Shuffle className="h-4 w-4 mr-1" />
             Transform
+          </Button>
+          <Button
+            variant={view === 'api' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setView('api')}
+          >
+            <Zap className="h-4 w-4 mr-1" />
+            API
           </Button>
         </div>
 

@@ -22,7 +22,7 @@ export interface JsonState {
   fileSize: number;
   
   // UI state
-  view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform';
+  view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform' | 'api';
   isLoading: boolean;
   error: JsonError | null;
   
@@ -32,7 +32,7 @@ export interface JsonState {
   
   // Actions
   setJsonData: (data: JsonValue, raw: string, fileName?: string) => void;
-  setView: (view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform') => void;
+  setView: (view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform' | 'api') => void;
   setSearchQuery: (query: string) => void;
   setFilterPath: (path: string) => void;
   clearData: () => void;
