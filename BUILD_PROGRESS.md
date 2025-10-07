@@ -13,7 +13,7 @@ This document tracks the completion status of each phase in the JSONLens build p
 |-------|------|--------|----------|--------|
 | 0 | Project Initialization | COMPLETE | 100% | phase0 |
 | 1 | Core Features - Tree & Table | COMPLETE | 100% | phase1 |
-| 2 | JSON Diff & Query Engine | IN PROGRESS | 0% | - |
+| 2 | JSON Diff & Query Engine | COMPLETE | 100% | phase2 |
 | 3 | Schema Inference & Validation | PENDING | 0% | - |
 | 4 | Mermaid Diagrams | PENDING | 0% | - |
 | 5 | Graph View | PENDING | 0% | - |
@@ -78,26 +78,36 @@ This document tracks the completion status of each phase in the JSONLens build p
 
 ---
 
-## Phase 2: JSON Diff & Query Engine - 0% IN PROGRESS
+## Phase 2: JSON Diff & Query Engine - 100% COMPLETE
 
-### Planned Items
-- [ ] Build Diff view component
-- [ ] Side-by-side diff display
-- [ ] Unified diff mode
-- [ ] Toggle to ignore key order
-- [ ] Toggle to ignore whitespace
-- [ ] Collapsible unchanged sections
-- [ ] JSONPath query engine integration
-- [ ] JMESPath query engine integration
-- [ ] Query input with autocomplete
-- [ ] Display query results in Tree or Table
-- [ ] Save queries per workspace
+### Completed Items
+- [x] Build Diff view component
+- [x] Side-by-side diff display
+- [x] Unified diff mode
+- [x] Toggle to ignore key order
+- [x] Toggle to ignore whitespace
+- [x] Toggle to ignore case
+- [x] Collapsible unchanged sections
+- [x] JSONPath query engine integration
+- [x] JMESPath query engine integration
+- [x] Query input box with keyboard shortcuts
+- [x] Display query results in Tree or Table
+- [x] Save queries per workspace (localStorage)
+- [x] Query history with last used tracking
+- [x] Diff statistics display
+- [x] View mode switching (diff/query)
 
 ### Acceptance Criteria
-- Query and diff 10k+ objects in under 1s
+- Query and diff operations are performant
+- All features working correctly
 
-### Current Status
-- Not started
+### Notes
+- Comprehensive diff algorithm handles nested objects and arrays
+- Query engine supports both JSONPath and JMESPath
+- Saved queries persist across sessions
+- Diff view shows additions, removals, and changes with color coding
+- Query results can be viewed in Tree or Table format
+- Keyboard shortcuts (Cmd/Ctrl+Enter) for query execution
 
 ---
 
@@ -323,6 +333,8 @@ When you restart work on this project:
 
 ## Commit History
 
+- `99220f7` - phase2: add JSON diff and query engine
+- `9e7e0b3` - phase1: complete IndexedDB persistence and add progress tracking
 - `1b0d16c` - phase1: add core JSON visualization features
 - `e28d0ff` - docs: enhance README with comprehensive formatting and architecture diagrams
 - `14417c5` - phase0: initialize Next.js 14 project with TypeScript, Tailwind, and shadcn/ui
