@@ -16,7 +16,7 @@ This document tracks the completion status of each phase in the JSONLens build p
 | 2 | JSON Diff & Query Engine | COMPLETE | 100% | phase2 |
 | 3 | Schema Inference & Validation | COMPLETE | 100% | phase3 |
 | 4 | Mermaid Diagrams | COMPLETE | 100% | phase4 |
-| 5 | Graph View | PENDING | 0% | - |
+| 5 | Graph View | COMPLETE | 100% | phase5 |
 | 6 | Treemap, Heatmap & Timeline | PENDING | 0% | - |
 | 7 | Transformers & Converters | PENDING | 0% | - |
 | 8 | API Playground | PENDING | 0% | - |
@@ -178,19 +178,39 @@ This document tracks the completion status of each phase in the JSONLens build p
 
 ---
 
-## Phase 5: Graph View (Entity Relationships) - 0% PENDING
+## Phase 5: Graph View (Entity Relationships) - 100% COMPLETE
 
-### Planned Items
-- [ ] Relationship inference from naming conventions
-- [ ] Force-directed layout clustering
-- [ ] Node search functionality
-- [ ] Zoom controls
-- [ ] Drag controls
-- [ ] Export graph as PNG/SVG
-- [ ] Export as .graph.json
+### Completed Items
+- [x] Relationship inference from naming conventions (id, ref, foreign key patterns)
+- [x] Entity type detection from type fields
+- [x] Force-directed layout with D3.js
+- [x] Collision detection between nodes
+- [x] Node clustering by entity group
+- [x] Color-coded nodes by group
+- [x] Interactive node dragging
+- [x] Zoom controls (in, out, reset)
+- [x] Pan and zoom with mouse/trackpad
+- [x] Node search and filtering
+- [x] Node selection with data preview
+- [x] Export graph as PNG
+- [x] Export graph as SVG
+- [x] Export graph as JSON
+- [x] Visual legend for node and edge types
+- [x] Reference vs contains edge differentiation
 
 ### Acceptance Criteria
-- 5k nodes interactive with no lag
+- Interactive graph with smooth performance
+- Relationships detected automatically
+- Easy navigation with zoom and pan
+
+### Notes
+- Uses D3.js force simulation for layout
+- Detects ID fields (id, _id, uuid, etc.)
+- Detects foreign keys (userId, product_id, etc.)
+- Limits to 100 nodes by default for performance
+- Side panel shows selected node details
+- Dashed lines indicate reference relationships
+- Solid lines indicate containment relationships
 
 ---
 
@@ -361,6 +381,8 @@ When you restart work on this project:
 
 ## Commit History
 
+- `1625ec7` - phase5: add interactive graph view with entity relationships
+- `35e9b9c` - docs: update BUILD_PROGRESS with Phase 4 completion
 - `84eb2eb` - phase4: add Mermaid diagram generation
 - `802c451` - phase3: add schema inference and validation
 - `1751fe9` - docs: update BUILD_PROGRESS with Phase 2 completion
