@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Table2, FileText, Download, Trash2 } from 'lucide-react';
+import { List, Table2, FileText, Download, Trash2, GitCompare, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJsonStore } from '@/store/json-store';
 import { formatBytes } from '@/lib/json-parser';
@@ -68,6 +68,22 @@ export function JsonToolbar() {
           >
             <FileText className="h-4 w-4 mr-1" />
             Raw
+          </Button>
+          <Button
+            variant={view === 'diff' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setView('diff')}
+          >
+            <GitCompare className="h-4 w-4 mr-1" />
+            Diff
+          </Button>
+          <Button
+            variant={view === 'query' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setView('query')}
+          >
+            <Search className="h-4 w-4 mr-1" />
+            Query
           </Button>
         </div>
 

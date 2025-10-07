@@ -8,9 +8,11 @@ import { JsonToolbar } from './json-toolbar';
 import { TreeView } from './tree-view';
 import { TableView } from './table-view';
 import { RawView } from './raw-view';
+import { DiffView } from './diff-view';
+import { QueryView } from './query-view';
 
 export function JsonViewer() {
-  const { jsonData, error, isLoading, view, loadFromIndexedDB } = useJsonStore();
+  const { jsonData, error, isLoading, view, loadFromIndexedDB, fileName } = useJsonStore();
   
   useEffect(() => {
     if (!jsonData && !error) {
@@ -45,6 +47,8 @@ export function JsonViewer() {
         {view === 'tree' && <TreeView data={jsonData} />}
         {view === 'table' && <TableView data={jsonData} />}
         {view === 'raw' && <RawView />}
+        {view === 'diff' && <DiffView leftData={jsonData} leftLabel={fileName || 'Current JSON'} />}
+        {view === 'query' && <QueryView data={jsonData} />}
       </div>
     </div>
   );

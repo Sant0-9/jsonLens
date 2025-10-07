@@ -22,7 +22,7 @@ export interface JsonState {
   fileSize: number;
   
   // UI state
-  view: 'tree' | 'table' | 'raw';
+  view: 'tree' | 'table' | 'raw' | 'diff' | 'query';
   isLoading: boolean;
   error: JsonError | null;
   
@@ -32,7 +32,7 @@ export interface JsonState {
   
   // Actions
   setJsonData: (data: JsonValue, raw: string, fileName?: string) => void;
-  setView: (view: 'tree' | 'table' | 'raw') => void;
+  setView: (view: 'tree' | 'table' | 'raw' | 'diff' | 'query') => void;
   setSearchQuery: (query: string) => void;
   setFilterPath: (path: string) => void;
   clearData: () => void;
