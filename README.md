@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JSONLens
+
+**See JSON clearly. Diagram instantly.**
+
+A powerful, local-first JSON visualization studio designed for developers, analysts, and researchers. Explore, transform, and visualize JSON data with interactive diagrams, charts, and intelligent insights.
+
+## Features
+
+- Local-first architecture - all processing happens in your browser
+- Handle large JSON files up to 100MB with smooth performance
+- Rich visualizations including diagrams, graphs, tables, and more
+- Schema inference and validation
+- Data transformations and conversions
+- Dark mode support with system preference detection
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript 5
+- **Styling:** Tailwind CSS 3.4
+- **UI Components:** shadcn/ui with Radix UI primitives
+- **State Management:** Zustand
+- **Theme:** next-themes
+
+## Version Information
+
+- Node.js: v22.17.1
+- npm: 10.9.2
+- Next.js: 14.2.32
+- React: 18
+- TypeScript: 5
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+jsonlens/
+├── app/              # Next.js app router pages and layouts
+├── components/       # Reusable React components
+│   └── ui/          # shadcn/ui components
+├── lib/             # Utility functions and helpers
+├── store/           # Zustand state management
+├── workers/         # Web Workers for heavy computations
+└── public/          # Static assets
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development Roadmap
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project is being built in phases:
 
-## Deploy on Vercel
+- [x] Phase 0: Project initialization with Next.js 14, TypeScript, Tailwind, and shadcn/ui
+- [ ] Phase 1: Core features - Tree & Table views with JSON import/validation
+- [ ] Phase 2: JSON Diff & Query Engine
+- [ ] Phase 3: Schema Inference & Validation
+- [ ] Phase 4: Mermaid Diagrams
+- [ ] Phase 5: Graph View (Entity Relationships)
+- [ ] Phase 6: Treemap, Heatmap & Timeline
+- [ ] Phase 7: Transformers, Converters & Mock Data
+- [ ] Phase 8: API Playground
+- [ ] Phase 9: UX Polish & Power Tools
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is built following strict quality and security guidelines with a focus on performance, accessibility, and user privacy.
