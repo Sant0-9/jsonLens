@@ -3,7 +3,9 @@
 ## Overview
 This document tracks the completion status of each phase in the JSONLens build plan.
 
-**Last Updated:** 2025-10-07
+**Last Updated:** 2025-10-07  
+**Current Status:** Phase 5 COMPLETE - Ready to start Phase 6  
+**Next Session:** Begin Phase 6 - Treemap, Heatmap & Timeline
 
 ---
 
@@ -214,7 +216,17 @@ This document tracks the completion status of each phase in the JSONLens build p
 
 ---
 
-## Phase 6: Treemap, Heatmap & Timeline - 0% PENDING
+---
+---
+---
+
+## ⚠️ RESUME HERE - START PHASE 6 NEXT SESSION ⚠️
+
+---
+---
+---
+
+## Phase 6: Treemap, Heatmap & Timeline - 0% PENDING - START HERE NEXT TIME
 
 ### Planned Items
 - [ ] Treemap visualization
@@ -225,6 +237,15 @@ This document tracks the completion status of each phase in the JSONLens build p
 
 ### Acceptance Criteria
 - Handle 100k records with responsive updates
+
+### Getting Started:
+1. Install visualization libraries (recharts or d3 extensions)
+2. Create lib/data-profiler.ts for statistical analysis
+3. Create components/treemap-view.tsx
+4. Create components/heatmap-view.tsx
+5. Create components/timeline-view.tsx
+6. Add view buttons to toolbar
+7. Update store to support new views
 
 ---
 
@@ -366,16 +387,59 @@ This document tracks the completion status of each phase in the JSONLens build p
 
 ---
 
-## Notes for Next Session
+## ⭐ QUICK START FOR NEXT SESSION ⭐
 
-When you restart work on this project:
+### Current Status (Session End):
+- ✅ **Phases 0-5 COMPLETE** (41.7% done)
+- ✅ **8 views implemented** (Tree, Table, Raw, Diff, Query, Schema, Diagram, Graph)
+- ✅ **All builds passing**
+- 🎯 **NEXT: Phase 6 - Treemap, Heatmap & Timeline**
 
-1. Check this file to see current progress
-2. Phase 1 is complete with IndexedDB persistence
-3. Next: Start Phase 2 - Diff & Query Engine
-4. All phase commits follow format: `phase<N>: <short summary>`
-5. No emojis in code, no tags/mentions in commits
-6. Run `npm run lint` before committing
+### Where We Left Off:
+```
+Last completed: Phase 5 - Graph View with entity relationships
+Last commit:    fed626f - docs: update BUILD_PROGRESS with Phase 5 completion
+Status:         All tests passing, ready for Phase 6
+```
+
+### To Resume Next Time:
+
+1. **Navigate to project:**
+   ```bash
+   cd /home/oneknight/projects/jsonLens
+   ```
+
+2. **Check current state:**
+   ```bash
+   cat BUILD_PROGRESS.md | head -30
+   git log --oneline | head -5
+   ```
+
+3. **Start development:**
+   ```bash
+   NODE_ENV= npm run dev  # Remember to unset NODE_ENV!
+   ```
+
+4. **Look for the marker:**
+   - Search this file for: "⚠️ RESUME HERE"
+   - That's Phase 6 - start there
+
+5. **Build before committing:**
+   ```bash
+   NODE_ENV= npm run build
+   ```
+
+### Phase 6 Quick Notes:
+- Install: recharts or visx for visualizations
+- Create: data profiler for statistics
+- Build: 3 new view components (treemap, heatmap, timeline)
+- Focus: Data profiling and temporal analysis
+
+### Important Reminders:
+- All phase commits follow format: `phase<N>: <short summary>`
+- No emojis in code, no tags/mentions in commits
+- Run `NODE_ENV= npm run build` before committing
+- Update this file after each phase completion
 
 ---
 
