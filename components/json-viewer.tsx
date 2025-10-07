@@ -14,6 +14,7 @@ import { SchemaView } from './schema-view';
 import { DiagramView } from './diagram-view';
 import { GraphView } from './graph-view';
 import { VisualizationView } from './visualization-view';
+import { TransformView } from './transform-view';
 
 export function JsonViewer() {
   const { jsonData, error, isLoading, view, loadFromIndexedDB, fileName } = useJsonStore();
@@ -57,6 +58,7 @@ export function JsonViewer() {
         {view === 'diagram' && <DiagramView data={jsonData} />}
         {view === 'graph' && <GraphView data={jsonData} />}
         {view === 'visualize' && <VisualizationView data={jsonData} />}
+        {view === 'transform' && <TransformView data={jsonData} />}
       </div>
     </div>
   );
