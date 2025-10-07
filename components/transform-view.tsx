@@ -24,7 +24,6 @@ import {
 } from '@/lib/converters';
 import {
   generateMockDataFromSample,
-  generateMockDataFromSchema,
   downloadMockData,
   MockDataOptions,
 } from '@/lib/mock-generator';
@@ -242,7 +241,7 @@ export function TransformView({ data }: TransformViewProps) {
         htmlDescription: 'Data exported from JSONLens',
       };
       await exportToZip(data, 'jsonlens-export', options);
-    } catch (err) {
+    } catch {
       setError('Failed to create ZIP export');
     }
   }, [data]);
@@ -250,7 +249,7 @@ export function TransformView({ data }: TransformViewProps) {
   const handleExportHtml = useCallback(() => {
     try {
       exportToHtml(data, 'JSONLens Export', 'Data exported from JSONLens');
-    } catch (err) {
+    } catch {
       setError('Failed to create HTML export');
     }
   }, [data]);

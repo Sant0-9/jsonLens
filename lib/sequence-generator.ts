@@ -4,7 +4,7 @@ export interface SequenceStep {
   actor: string;
   action: string;
   target: string;
-  data?: any;
+  data?: unknown;
   timestamp: number;
   duration?: number;
   status?: number;
@@ -59,8 +59,9 @@ export class SequenceGenerator {
       }
       
       // Response
-      const statusColor = status >= 200 && status < 300 ? 'green' : 
-                         status >= 400 ? 'red' : 'yellow';
+      // Status color for potential future use
+      // const statusColor = status >= 200 && status < 300 ? 'green' : 
+      //                    status >= 400 ? 'red' : 'yellow';
       mermaid += `    ${hostname}-->>Client: ${status} (${snapshot.response.duration}ms)\n`;
       
       // Add response data if small enough
@@ -103,7 +104,7 @@ export class SequenceGenerator {
     });
     
     // Add sequence steps
-    steps.forEach((step, index) => {
+    steps.forEach((step) => {
       const status = step.status ? ` (${step.status})` : '';
       const duration = step.duration ? ` [${step.duration}ms]` : '';
       

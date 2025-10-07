@@ -58,7 +58,7 @@ export async function exportToZip(
   
   // Add HTML file
   if (options.includeHtml) {
-    const htmlContent = generateHtmlExport(data, options.htmlTitle, options.htmlDescription);
+    const htmlContent = generateHtmlExport(data, options.htmlTitle || 'JSONLens Export', options.htmlDescription || 'Data exported from JSONLens');
     zip.file('data.html', htmlContent);
   }
   

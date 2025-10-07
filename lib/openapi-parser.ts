@@ -11,8 +11,8 @@ export interface OpenApiSpec {
   }>;
   paths: Record<string, Record<string, OpenApiOperation>>;
   components?: {
-    schemas?: Record<string, any>;
-    securitySchemes?: Record<string, any>;
+    schemas?: Record<string, unknown>;
+    securitySchemes?: Record<string, unknown>;
   };
 }
 
@@ -24,16 +24,16 @@ export interface OpenApiOperation {
     name: string;
     in: 'query' | 'header' | 'path' | 'cookie';
     required?: boolean;
-    schema?: any;
+    schema?: unknown;
     description?: string;
   }>;
   requestBody?: {
-    content: Record<string, any>;
+    content: Record<string, unknown>;
     required?: boolean;
   };
   responses: Record<string, {
     description: string;
-    content?: Record<string, any>;
+    content?: Record<string, unknown>;
   }>;
   security?: Array<Record<string, string[]>>;
 }
@@ -53,7 +53,7 @@ export interface ParsedEndpoint {
   }>;
   requestBody?: {
     contentType: string;
-    schema: any;
+    schema: unknown;
     required: boolean;
   };
   responses: Array<{
@@ -68,17 +68,18 @@ export interface ParsedEndpoint {
 }
 
 export class OpenApiParser {
-  static parseSpec(spec: any): OpenApiSpec {
+  static parseSpec(spec: unknown): OpenApiSpec {
     // Basic validation
-    if (!spec.openapi && !spec.swagger) {
+    const s = spec as Record<string, unknown>;
+    if (!s.openapi && !s.swagger) {
       throw new Error('Invalid OpenAPI specification: missing openapi/swagger version');
     }
     
-    if (!spec.info) {
+    if (!s.info) {
       throw new Error('Invalid OpenAPI specification: missing info section');
     }
     
-    if (!spec.paths) {
+    if (!s.paths) {
       throw new Error('Invalid OpenAPI specification: missing paths section');
     }
     
@@ -117,74 +118,80 @@ export class OpenApiParser {
     return endpoints;
   }
   
-  private static extractParameters(parameters: any[]): ParsedEndpoint['parameters'] {
-    return parameters.map(param => ({
-      name: param.name,
-      in: param.in,
-      required: param.required || false,
-      type: this.getParameterType(param.schema),
-      description: param.description || '',
-    }));
+  private static extractParameters(parameters: unknown[]): ParsedEndpoint['parameters'] {
+    return parameters.map(param => {
+      const p = param as Record<string, unknown>;
+      return {
+        name: p.name as string,
+        in: p.in as 'query' | 'header' | 'path' | 'cookie',
+        required: p.required as boolean || false,
+        type: this.getParameterType(p.schema),
+        description: p.description as string || '',
+      };
+    });
   }
   
-  private static extractResponses(responses: any): ParsedEndpoint['responses'] {
-    return Object.entries(responses).map(([status, response]: [string, any]) => ({
+  private static extractResponses(responses: unknown): ParsedEndpoint['responses'] {
+    return Object.entries(responses as Record<string, unknown>).map(([status, response]) => ({
       status,
-      description: response.description || '',
-      contentType: this.getResponseContentType(response.content),
+      description: String((response as Record<string, unknown>).description || ''),
+      contentType: this.getResponseContentType((response as Record<string, unknown>).content),
     }));
   }
   
-  private static extractRequestBody(requestBody: any): ParsedEndpoint['requestBody'] {
-    const contentTypes = Object.keys(requestBody.content || {});
+  private static extractRequestBody(requestBody: unknown): ParsedEndpoint['requestBody'] {
+    const body = requestBody as Record<string, unknown>;
+    const content = body.content as Record<string, unknown> || {};
+    const contentTypes = Object.keys(content);
     const primaryContentType = contentTypes[0] || 'application/json';
     
     return {
       contentType: primaryContentType,
-      schema: requestBody.content?.[primaryContentType]?.schema,
-      required: requestBody.required || false,
+      schema: (content[primaryContentType] as Record<string, unknown>)?.schema,
+      required: Boolean(body.required),
     };
   }
   
   private static extractSecurity(
-    security: any[] | undefined,
-    securitySchemes: any
+    security: unknown[] | undefined,
+    securitySchemes: unknown
   ): ParsedEndpoint['security'] {
     if (!security || !securitySchemes) return [];
     
     return security.flatMap(sec => 
-      Object.entries(sec).map(([name, scopes]) => ({
-        type: securitySchemes[name]?.type || 'unknown',
+      Object.entries(sec as Record<string, unknown>).map(([name]) => ({
+        type: String(((securitySchemes as Record<string, unknown>)[name] as Record<string, unknown>)?.type || 'unknown'),
         name,
       }))
     );
   }
   
-  private static getParameterType(schema: any): string {
+  private static getParameterType(schema: unknown): string {
     if (!schema) return 'string';
     
-    if (schema.type) {
-      return schema.type;
+    const s = schema as Record<string, unknown>;
+    if (s.type) {
+      return s.type as string;
     }
     
-    if (schema.$ref) {
+    if (s.$ref) {
       return 'object';
     }
     
     return 'string';
   }
   
-  private static getResponseContentType(content: any): string | undefined {
+  private static getResponseContentType(content: unknown): string | undefined {
     if (!content) return undefined;
     
-    const contentTypes = Object.keys(content);
+    const contentTypes = Object.keys(content as Record<string, unknown>);
     return contentTypes[0];
   }
   
   static generateRequestFromEndpoint(
     endpoint: ParsedEndpoint,
     baseUrl: string = '',
-    values: Record<string, any> = {}
+    values: Record<string, unknown> = {}
   ): { url: string; method: string; headers: Record<string, string>; body?: string } {
     let url = `${baseUrl}${endpoint.path}`;
     
@@ -193,13 +200,13 @@ export class OpenApiParser {
       .filter(p => p.in === 'path')
       .forEach(param => {
         const value = values[param.name] || `{${param.name}}`;
-        url = url.replace(`{${param.name}}`, encodeURIComponent(value));
+        url = url.replace(`{${param.name}}`, encodeURIComponent(String(value)));
       });
     
     // Add query parameters
     const queryParams = endpoint.parameters
       .filter(p => p.in === 'query' && values[p.name] !== undefined)
-      .map(p => `${p.name}=${encodeURIComponent(values[p.name])}`);
+      .map(p => `${p.name}=${encodeURIComponent(String(values[p.name]))}`);
     
     if (queryParams.length > 0) {
       url += `?${queryParams.join('&')}`;
@@ -213,7 +220,7 @@ export class OpenApiParser {
     endpoint.parameters
       .filter(p => p.in === 'header' && values[p.name] !== undefined)
       .forEach(param => {
-        headers[param.name] = values[param.name];
+        headers[param.name] = String(values[param.name]);
       });
     
     // Add content type for request body
@@ -227,7 +234,7 @@ export class OpenApiParser {
       if (endpoint.requestBody.contentType.includes('application/json')) {
         body = JSON.stringify(values.body, null, 2);
       } else {
-        body = values.body;
+        body = String(values.body);
       }
     }
     

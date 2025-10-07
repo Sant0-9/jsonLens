@@ -12,7 +12,7 @@ interface ApiPlaygroundViewProps {
   data: JsonValue;
 }
 
-export function ApiPlaygroundView({ data }: ApiPlaygroundViewProps) {
+export function ApiPlaygroundView({}: ApiPlaygroundViewProps) {
   const [endpoints, setEndpoints] = useState<ParsedEndpoint[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState<ParsedEndpoint | null>(null);
   const [request, setRequest] = useState<ApiRequest>({
@@ -278,9 +278,9 @@ export function ApiPlaygroundView({ data }: ApiPlaygroundViewProps) {
                 </span>
               </Button>
             </label>
-            {openApiSpec && (
+            {Boolean(openApiSpec) && (
               <div className="text-sm text-muted-foreground flex items-center">
-                Loaded: {openApiSpec.info?.title} v{openApiSpec.info?.version}
+                Loaded: OpenAPI Specification
               </div>
             )}
           </div>

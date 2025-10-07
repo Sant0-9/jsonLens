@@ -156,11 +156,11 @@ function inferFieldType(value: unknown): string {
   return 'string';
 }
 
-export function generateMockDataFromSchema(schema: any, options: Partial<MockDataOptions> = {}): JsonValue[] {
+export function generateMockDataFromSchema(schema: unknown, options: Partial<MockDataOptions> = {}): JsonValue[] {
   const opts = { ...defaultOptions, ...options };
   const result: JsonValue[] = [];
   
-  if (!schema || !schema.properties) {
+    if (!schema || !(schema as Record<string, unknown>).properties) {
     // Generate simple array of objects if no schema
     for (let i = 0; i < opts.count; i++) {
       result.push({
@@ -180,12 +180,12 @@ export function generateMockDataFromSchema(schema: any, options: Partial<MockDat
   for (let i = 0; i < opts.count; i++) {
     const item: Record<string, unknown> = {};
     
-    Object.entries(schema.properties).forEach(([key, prop]: [string, any]) => {
-      const fieldType = prop.type || 'string';
+    Object.entries((schema as Record<string, unknown>).properties as Record<string, unknown>).forEach(([key, prop]) => {
+      const fieldType = (prop as Record<string, unknown>).type as string || 'string';
       item[key] = generateMockValue(fieldType, opts);
     });
     
-    result.push(item);
+    result.push(item as JsonValue);
   }
   
   return result;
@@ -208,7 +208,7 @@ export function generateMockDataFromSample(sample: JsonValue, options: Partial<M
           item[key] = generateMockValue(type, opts);
         });
         
-        result.push(item);
+        result.push(item as JsonValue);
       }
     } else {
       // Generate array of simple values
@@ -227,7 +227,7 @@ export function generateMockDataFromSample(sample: JsonValue, options: Partial<M
         item[key] = generateMockValue(type, opts);
       });
       
-      result.push(item);
+      result.push(item as JsonValue);
     }
   } else {
     // Generate array of simple values
@@ -239,11 +239,11 @@ export function generateMockDataFromSample(sample: JsonValue, options: Partial<M
   return result;
 }
 
-function inferSchemaFromSample(sample: any): Record<string, string> {
+function inferSchemaFromSample(sample: unknown): Record<string, string> {
   const schema: Record<string, string> = {};
   
   if (typeof sample === 'object' && sample !== null && !Array.isArray(sample)) {
-    Object.entries(sample).forEach(([key, value]) => {
+    Object.entries(sample as Record<string, unknown>).forEach(([key, value]) => {
       schema[key] = inferFieldType(value);
     });
   }

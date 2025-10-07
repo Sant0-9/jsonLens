@@ -10,7 +10,7 @@ export interface ApiResponse {
   status: number;
   statusText: string;
   headers: Record<string, string>;
-  data: any;
+  data: unknown;
   duration: number;
   size: number;
 }
@@ -55,7 +55,7 @@ export class ApiClient {
         responseHeaders[key] = value;
       });
       
-      let data: any;
+      let data: unknown;
       const contentType = response.headers.get('content-type') || '';
       
       if (contentType.includes('application/json')) {
@@ -108,7 +108,7 @@ export class ApiClient {
     environment?: Environment
   ): ApiRequest {
     let processedUrl = url;
-    let processedHeaders = { ...headers };
+      const processedHeaders = { ...headers };
     
     if (environment) {
       // Interpolate variables in URL
