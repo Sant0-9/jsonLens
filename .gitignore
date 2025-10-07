@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# build instructions and session markers (local only)
+BUILD_PROGRESS.md
+CURRENT_STATUS.md
+START_HERE.txt
+json_visualizer_build_plan (1).md
