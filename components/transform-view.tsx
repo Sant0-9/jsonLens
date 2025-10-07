@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { JsonValue, useJsonStore } from '@/store/json-store';
 import {
   flattenObject,
+  unflattenObject,
   dedupeArray,
   redactData,
   pivotData,
@@ -21,12 +22,23 @@ import {
   downloadAsFormat,
   ConversionFormat,
 } from '@/lib/converters';
+import {
+  generateMockDataFromSample,
+  generateMockDataFromSchema,
+  downloadMockData,
+  MockDataOptions,
+} from '@/lib/mock-generator';
+import {
+  exportToZip,
+  exportToHtml,
+  ExportOptions,
+} from '@/lib/export-utils';
 
 interface TransformViewProps {
   data: JsonValue;
 }
 
-type TransformType = 'flatten' | 'dedupe' | 'redact' | 'pivot' | 'sort' | 'filter' | 'remap';
+type TransformType = 'flatten' | 'unflatten' | 'dedupe' | 'redact' | 'pivot' | 'sort' | 'filter' | 'remap' | 'mock';
 type ConvertType = 'csv' | 'yaml' | 'ndjson';
 
 export function TransformView({ data }: TransformViewProps) {
@@ -45,6 +57,16 @@ export function TransformView({ data }: TransformViewProps) {
   const [filterExpr, setFilterExpr] = useState('');
   const [remapFrom, setRemapFrom] = useState('');
   const [remapTo, setRemapTo] = useState('');
+  const [mockCount, setMockCount] = useState(10);
+  const [mockOptions, setMockOptions] = useState<MockDataOptions>({
+    count: 10,
+    includeNulls: false,
+    includeEmptyArrays: false,
+    includeEmptyObjects: false,
+    stringLength: { min: 3, max: 20 },
+    numberRange: { min: 0, max: 100 },
+    arrayLength: { min: 2, max: 8 },
+  });
 
   const applyTransform = useCallback(() => {
     let transformResult: TransformResult | null = null;
@@ -55,6 +77,17 @@ export function TransformView({ data }: TransformViewProps) {
           transformResult = {
             success: true,
             data: flattenObject(data),
+          };
+          break;
+          
+        case 'unflatten':
+          if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+            setError('Data must be a flat object for unflattening');
+            return;
+          }
+          transformResult = {
+            success: true,
+            data: unflattenObject(data as Record<string, unknown>),
           };
           break;
           
@@ -106,6 +139,19 @@ export function TransformView({ data }: TransformViewProps) {
           });
           transformResult = remapKeys(data, mapping);
           break;
+          
+        case 'mock':
+          const mockData = generateMockDataFromSample(data, { ...mockOptions, count: mockCount });
+          transformResult = {
+            success: true,
+            data: mockData,
+            stats: {
+              before: Array.isArray(data) ? data.length : 1,
+              after: mockData.length,
+              changed: 0,
+            },
+          };
+          break;
       }
       
       if (transformResult && transformResult.success && transformResult.data) {
@@ -121,7 +167,7 @@ export function TransformView({ data }: TransformViewProps) {
       setError(err instanceof Error ? err.message : 'Transform failed');
       setResult('');
     }
-  }, [transformType, data, redactPatterns, pivotRow, pivotCol, pivotVal, sortKey, sortOrder, filterExpr, remapFrom, remapTo, history]);
+  }, [transformType, data, redactPatterns, pivotRow, pivotCol, pivotVal, sortKey, sortOrder, filterExpr, remapFrom, remapTo, history, mockCount, mockOptions]);
 
   const applyToData = useCallback(() => {
     if (!result) return;
@@ -174,6 +220,41 @@ export function TransformView({ data }: TransformViewProps) {
     downloadAsFormat(data, format, 'export');
   }, [data]);
 
+  const handleDownloadMock = useCallback(() => {
+    if (!result) return;
+    try {
+      const mockData = JSON.parse(result);
+      downloadMockData(mockData, 'mock-data');
+    } catch {
+      setError('Invalid mock data to download');
+    }
+  }, [result]);
+
+  const handleExportZip = useCallback(async () => {
+    try {
+      const options: ExportOptions = {
+        includeJson: true,
+        includeCsv: true,
+        includeYaml: true,
+        includeNdjson: true,
+        includeHtml: true,
+        htmlTitle: 'JSONLens Export',
+        htmlDescription: 'Data exported from JSONLens',
+      };
+      await exportToZip(data, 'jsonlens-export', options);
+    } catch (err) {
+      setError('Failed to create ZIP export');
+    }
+  }, [data]);
+
+  const handleExportHtml = useCallback(() => {
+    try {
+      exportToHtml(data, 'JSONLens Export', 'Data exported from JSONLens');
+    } catch (err) {
+      setError('Failed to create HTML export');
+    }
+  }, [data]);
+
   return (
     <div className="flex flex-col h-full">
       <div className="border-b p-4 space-y-4">
@@ -205,6 +286,13 @@ export function TransformView({ data }: TransformViewProps) {
                 onClick={() => setTransformType('flatten')}
               >
                 Flatten
+              </Button>
+              <Button
+                variant={transformType === 'unflatten' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setTransformType('unflatten')}
+              >
+                Unflatten
               </Button>
               <Button
                 variant={transformType === 'dedupe' ? 'secondary' : 'ghost'}
@@ -247,6 +335,13 @@ export function TransformView({ data }: TransformViewProps) {
                 onClick={() => setTransformType('remap')}
               >
                 Remap Keys
+              </Button>
+              <Button
+                variant={transformType === 'mock' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setTransformType('mock')}
+              >
+                Generate Mock
               </Button>
             </div>
           </div>
@@ -359,6 +454,101 @@ export function TransformView({ data }: TransformViewProps) {
             </div>
           )}
 
+          {transformType === 'mock' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm">Number of records to generate:</label>
+                <input
+                  type="number"
+                  value={mockCount}
+                  onChange={(e) => setMockCount(parseInt(e.target.value) || 10)}
+                  className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+                  min="1"
+                  max="1000"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-sm">String length (min-max):</label>
+                  <div className="flex gap-1">
+                    <input
+                      type="number"
+                      value={mockOptions.stringLength.min}
+                      onChange={(e) => setMockOptions(prev => ({
+                        ...prev,
+                        stringLength: { ...prev.stringLength, min: parseInt(e.target.value) || 3 }
+                      }))}
+                      className="flex-1 mt-1 px-2 py-1 border rounded text-sm"
+                      min="1"
+                    />
+                    <input
+                      type="number"
+                      value={mockOptions.stringLength.max}
+                      onChange={(e) => setMockOptions(prev => ({
+                        ...prev,
+                        stringLength: { ...prev.stringLength, max: parseInt(e.target.value) || 20 }
+                      }))}
+                      className="flex-1 mt-1 px-2 py-1 border rounded text-sm"
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm">Number range (min-max):</label>
+                  <div className="flex gap-1">
+                    <input
+                      type="number"
+                      value={mockOptions.numberRange.min}
+                      onChange={(e) => setMockOptions(prev => ({
+                        ...prev,
+                        numberRange: { ...prev.numberRange, min: parseInt(e.target.value) || 0 }
+                      }))}
+                      className="flex-1 mt-1 px-2 py-1 border rounded text-sm"
+                    />
+                    <input
+                      type="number"
+                      value={mockOptions.numberRange.max}
+                      onChange={(e) => setMockOptions(prev => ({
+                        ...prev,
+                        numberRange: { ...prev.numberRange, max: parseInt(e.target.value) || 100 }
+                      }))}
+                      className="flex-1 mt-1 px-2 py-1 border rounded text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={mockOptions.includeNulls}
+                    onChange={(e) => setMockOptions(prev => ({ ...prev, includeNulls: e.target.checked }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Include nulls</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={mockOptions.includeEmptyArrays}
+                    onChange={(e) => setMockOptions(prev => ({ ...prev, includeEmptyArrays: e.target.checked }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Empty arrays</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={mockOptions.includeEmptyObjects}
+                    onChange={(e) => setMockOptions(prev => ({ ...prev, includeEmptyObjects: e.target.checked }))}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Empty objects</span>
+                </label>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button onClick={applyTransform}>
               <Code2 className="h-4 w-4 mr-1" />
@@ -398,6 +588,26 @@ export function TransformView({ data }: TransformViewProps) {
               <Button variant="outline" size="sm" onClick={() => handleDownload('ndjson')}>
                 <Download className="h-3 w-3 mr-1" />
                 NDJSON
+              </Button>
+              {transformType === 'mock' && result && (
+                <Button variant="outline" size="sm" onClick={handleDownloadMock}>
+                  <Download className="h-3 w-3 mr-1" />
+                  Mock Data
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-medium mb-2">Advanced Export:</div>
+            <div className="flex gap-1 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleExportZip}>
+                <Download className="h-3 w-3 mr-1" />
+                Export as ZIP
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportHtml}>
+                <Download className="h-3 w-3 mr-1" />
+                Export as HTML
               </Button>
             </div>
           </div>
