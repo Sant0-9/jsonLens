@@ -22,7 +22,7 @@ export interface JsonState {
   fileSize: number;
   
   // UI state
-  view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform' | 'api';
+  view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform' | 'api' | 'profiler';
   isLoading: boolean;
   error: JsonError | null;
   
@@ -30,15 +30,25 @@ export interface JsonState {
   searchQuery: string;
   filterPath: string;
   
+  // Autosave state
+  lastSaved: number | null;
+  hasUnsavedChanges: boolean;
+  
+  // User intent state
+  userClearedData: boolean;
+  
   // Actions
   setJsonData: (data: JsonValue, raw: string, fileName?: string) => void;
-  setView: (view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform' | 'api') => void;
+  setView: (view: 'tree' | 'table' | 'raw' | 'diff' | 'query' | 'schema' | 'diagram' | 'graph' | 'visualize' | 'transform' | 'api' | 'profiler') => void;
   setSearchQuery: (query: string) => void;
   setFilterPath: (path: string) => void;
   clearData: () => void;
   setError: (error: JsonError | null) => void;
   setLoading: (loading: boolean) => void;
   loadFromIndexedDB: () => Promise<void>;
+  markAsSaved: () => void;
+  markAsChanged: () => void;
+  setUserClearedData: (cleared: boolean) => void;
 }
 
 export const useJsonStore = create<JsonState>()(
@@ -54,6 +64,9 @@ export const useJsonStore = create<JsonState>()(
       error: null,
       searchQuery: '',
       filterPath: '',
+      lastSaved: null,
+      hasUnsavedChanges: false,
+      userClearedData: false,
 
       // Actions
       setJsonData: (data, raw, fileName) => {
@@ -64,6 +77,8 @@ export const useJsonStore = create<JsonState>()(
           fileName: fileName || null,
           fileSize,
           error: null,
+          hasUnsavedChanges: true,
+          userClearedData: false,
         });
         
         // Save to IndexedDB asynchronously
@@ -75,6 +90,8 @@ export const useJsonStore = create<JsonState>()(
             fileName: fileName || null,
             fileSize,
             timestamp: Date.now(),
+          }).then(() => {
+            set({ lastSaved: Date.now(), hasUnsavedChanges: false });
           }).catch((error) => {
             console.error('Failed to save to IndexedDB:', error);
           });
@@ -96,6 +113,7 @@ export const useJsonStore = create<JsonState>()(
           error: null,
           searchQuery: '',
           filterPath: '',
+          userClearedData: true,
         }),
 
       setError: (error) => set({ error, isLoading: false }),
@@ -114,19 +132,29 @@ export const useJsonStore = create<JsonState>()(
               fileName: lastData.fileName,
               fileSize: lastData.fileSize,
               error: null,
+              hasUnsavedChanges: false,
+              lastSaved: lastData.timestamp,
             });
           }
         } catch (error) {
           console.error('Failed to load from IndexedDB:', error);
         }
       },
+
+      markAsSaved: () => set({ 
+        lastSaved: Date.now(), 
+        hasUnsavedChanges: false 
+      }),
+
+      markAsChanged: () => set({ hasUnsavedChanges: true }),
+
+      setUserClearedData: (userClearedData) => set({ userClearedData }),
     }),
     {
       name: 'jsonlens-storage',
       storage: createJSONStorage(() => localStorage),
+      // Persist only lightweight UI state to avoid heavy localStorage writes
       partialize: (state) => ({
-        jsonData: state.jsonData,
-        rawJson: state.rawJson,
         fileName: state.fileName,
         fileSize: state.fileSize,
         view: state.view,

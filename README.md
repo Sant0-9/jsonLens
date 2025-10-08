@@ -60,8 +60,8 @@ JSONPath queries, diff engine, transformers, converters (JSON/CSV/YAML), and moc
 
 Ensure you have the following installed:
 
-- **Node.js**: `v22.17.1` or higher
-- **npm**: `10.9.2` or higher
+- Node.js 18.17+ (or 20+)
+- npm 9+
 
 ### Installation
 
@@ -500,3 +500,23 @@ Built with amazing open-source tools:
 <div align="center">
 <sub>Built following strict quality, security, and accessibility guidelines</sub>
 </div>
+
+---
+
+## 📦 Deployment
+
+- One-click deploy: Vercel (recommended). Set `NODE_OPTIONS=--max-old-space-size=4096` for large bundles.
+- Build locally: `npm run build` then `npm start`.
+- Static assets: sample datasets are available under `public/samples` for quick demos.
+
+### Environment and Determinism
+
+- Local-first: no network calls by default. API features are opt-in.
+- Engines: Node 18.17+ (or 20+), npm 9+. Lockfile committed for reproducible installs.
+
+---
+
+## 🔍 Diagnostics
+
+- Visit `/diagnostics` for local observability (dataset size, profile, and current view).
+- Use the Command Palette (Cmd/Ctrl+K) → “Open Diagnostics”.

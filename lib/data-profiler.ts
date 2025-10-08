@@ -36,6 +36,17 @@ export interface DataProfile {
   size: number;
 }
 
+export interface HistogramBin {
+  x0: number;
+  x1: number;
+  count: number;
+}
+
+export interface NumericHistogram {
+  field: string;
+  bins: HistogramBin[];
+}
+
 function detectDateFormat(value: string): string | null {
   const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
   const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
@@ -279,4 +290,49 @@ export function getTreemapData(data: JsonValue): Array<{ name: string; size: num
   
   traverse(data);
   return result.filter(item => item.size > 0);
+}
+
+export function getNullRates(profile: DataProfile): Array<{ field: string; nullRate: number }> {
+  return Array.from(profile.fields.entries())
+    .map(([field, fp]) => ({
+      field,
+      nullRate: fp.count === 0 ? 0 : fp.nullCount / fp.count,
+    }))
+    .sort((a, b) => b.nullRate - a.nullRate);
+}
+
+export function getNumericHistograms(profile: DataProfile, binCount: number = 10): NumericHistogram[] {
+  const result: NumericHistogram[] = [];
+
+  profile.fields.forEach((fp, field) => {
+    if (fp.numericStats) {
+      const values: number[] = [];
+      fp.frequency.forEach((count, key) => {
+        const v = Number(key);
+        if (!Number.isNaN(v)) {
+          for (let i = 0; i < count; i++) values.push(v);
+        }
+      });
+      if (values.length === 0) return;
+
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+      const step = range / binCount;
+      const bins: HistogramBin[] = Array.from({ length: binCount }, (_, i) => ({
+        x0: min + i * step,
+        x1: min + (i + 1) * step,
+        count: 0,
+      }));
+      values.forEach(v => {
+        let idx = Math.floor((v - min) / step);
+        if (idx >= binCount) idx = binCount - 1;
+        if (idx < 0) idx = 0;
+        bins[idx].count += 1;
+      });
+      result.push({ field, bins });
+    }
+  });
+
+  return result;
 }

@@ -3,6 +3,7 @@
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
+import { CommandPalette } from "@/components/command-palette"
 
 export function Navigation() {
   const { theme, setTheme } = useTheme()
@@ -18,6 +19,7 @@ export function Navigation() {
         </div>
         
         <div className="flex items-center gap-2">
+          <CommandPalette />
           <Button
             variant="ghost"
             size="icon"

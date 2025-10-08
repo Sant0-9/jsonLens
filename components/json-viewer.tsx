@@ -15,16 +15,24 @@ import { DiagramView } from './diagram-view';
 import { GraphView } from './graph-view';
 import { VisualizationView } from './visualization-view';
 import { TransformView } from './transform-view';
+import { ProfilerView } from './profiler-view';
 import { ApiPlaygroundView } from './api-playground-view';
 
 export function JsonViewer() {
-  const { jsonData, error, isLoading, view, loadFromIndexedDB, fileName } = useJsonStore();
+  const { jsonData, error, isLoading, view, loadFromIndexedDB, fileName, userClearedData } = useJsonStore();
   
   useEffect(() => {
-    if (!jsonData && !error) {
-      loadFromIndexedDB();
+    // Only auto-load from IndexedDB if this is a fresh page load (no data in memory)
+    // and we're not in the middle of a file upload operation
+    // and the user hasn't explicitly cleared the data
+    if (!jsonData && !error && !isLoading && !userClearedData) {
+      // Add a small delay to allow for any pending operations
+      const timer = setTimeout(() => {
+        loadFromIndexedDB();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [loadFromIndexedDB, jsonData, error]);
+  }, [loadFromIndexedDB, jsonData, error, isLoading, userClearedData]);
 
   if (isLoading) {
     return (
@@ -61,6 +69,12 @@ export function JsonViewer() {
         {view === 'visualize' && <VisualizationView data={jsonData} />}
         {view === 'transform' && <TransformView data={jsonData} />}
         {view === 'api' && <ApiPlaygroundView data={jsonData} />}
+        {view === 'profiler' && <ProfilerView data={jsonData} />}
+      </div>
+      
+      {/* Show import area below the main content for loading new files */}
+      <div className="mt-4">
+        <JsonImport />
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ import {
   exportToHtml,
   ExportOptions,
 } from '@/lib/export-utils';
+import { getPluginTransforms } from '@/lib/plugin-system';
 
 interface TransformViewProps {
   data: JsonValue;
@@ -66,6 +67,8 @@ export function TransformView({ data }: TransformViewProps) {
     numberRange: { min: 0, max: 100 },
     arrayLength: { min: 2, max: 8 },
   });
+
+  const pluginTransforms = getPluginTransforms();
 
   const applyTransform = useCallback(() => {
     let transformResult: TransformResult | null = null;
@@ -559,6 +562,35 @@ export function TransformView({ data }: TransformViewProps) {
               </Button>
             )}
           </div>
+
+          {pluginTransforms.length > 0 && (
+            <div className="mt-4">
+              <div className="text-sm font-medium mb-2">Plugin Transforms:</div>
+              <div className="flex gap-1 flex-wrap">
+                {pluginTransforms.map((pt) => (
+                  <Button
+                    key={pt.id}
+                    variant="outline"
+                    size="sm"
+                    title={pt.description}
+                    onClick={() => {
+                      try {
+                        const transformed = pt.apply(data);
+                        const json = JSON.stringify(transformed, null, 2);
+                        setHistory((h) => [...h, data]);
+                        setResult(json);
+                        setError('');
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : 'Plugin transform failed');
+                      }
+                    }}
+                  >
+                    {pt.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <div className="text-sm font-medium mb-2">Convert & Download:</div>

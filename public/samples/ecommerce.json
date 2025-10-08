@@ -1,0 +1,11 @@
+{
+  "orders": [
+    {"id": 1, "userId": 101, "total": 59.99, "createdAt": "2024-01-05T12:34:00Z", "status": "shipped"},
+    {"id": 2, "userId": 102, "total": 12.49, "createdAt": "2024-01-06T08:10:00Z", "status": "processing"},
+    {"id": 3, "userId": 101, "total": 5.00, "createdAt": "2024-01-07T18:21:00Z", "status": "cancelled"}
+  ],
+  "users": [
+    {"id": 101, "email": "alice@example.com", "country": "US"},
+    {"id": 102, "email": "bob@example.com", "country": "CA"}
+  ]
+}

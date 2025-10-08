@@ -9,7 +9,7 @@ import { parseJson } from '@/lib/json-parser';
 export function JsonImport() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setJsonData, setError, setLoading } = useJsonStore();
+  const { setJsonData, setError, setLoading, jsonData, clearData } = useJsonStore();
 
   const processJsonText = useCallback(
     (text: string, fileName?: string) => {
@@ -111,6 +111,12 @@ export function JsonImport() {
     fileInputRef.current?.click();
   }, []);
 
+  const handleStartFresh = useCallback(() => {
+    if (confirm('This will clear the current data and start fresh. Are you sure?')) {
+      clearData();
+    }
+  }, [clearData]);
+
   return (
     <div className="space-y-4">
       <div
@@ -118,6 +124,7 @@ export function JsonImport() {
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        data-import-area
         className={`
           relative rounded-lg border-2 border-dashed transition-all duration-200
           ${
@@ -134,10 +141,14 @@ export function JsonImport() {
           </div>
 
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-semibold">Import JSON Data</h3>
+            <h3 className="text-xl font-semibold">
+              {jsonData ? 'Load New JSON Data' : 'Import JSON Data'}
+            </h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              Drag and drop a JSON file here, paste from clipboard, or browse
-              your files
+              {jsonData 
+                ? 'Load a different JSON file to replace the current data'
+                : 'Drag and drop a JSON file here, paste from clipboard, or browse your files'
+              }
             </p>
           </div>
 
@@ -150,6 +161,12 @@ export function JsonImport() {
               <Clipboard className="mr-2 h-4 w-4" />
               Paste JSON
             </Button>
+            {jsonData && (
+              <Button onClick={handleStartFresh} variant="destructive" size="lg">
+                <FileJson className="mr-2 h-4 w-4" />
+                Start Fresh
+              </Button>
+            )}
           </div>
 
           <input

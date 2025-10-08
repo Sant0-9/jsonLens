@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Download, Search, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Download, Search, ZoomIn, ZoomOut, Maximize2, Expand, Minimize, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { JsonValue } from '@/store/json-store';
 import { inferGraphFromData, exportGraphAsJson, GraphNode, GraphEdge } from '@/lib/graph-inference';
@@ -14,9 +14,19 @@ interface GraphViewProps {
 export function GraphView({ data }: GraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [renderTick, setRenderTick] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [limitExceeded, setLimitExceeded] = useState(false);
+  const [overrideLimit, setOverrideLimit] = useState(false);
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphEdge> | null>(null);
+  const svgSelRef = useRef<d3.Selection<SVGSVGElement, unknown, null, undefined> | null>(null);
+  const groupSelRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const graph = useMemo(() => {
     return inferGraphFromData(data);
@@ -43,6 +53,18 @@ export function GraphView({ data }: GraphViewProps) {
     };
   }, [graph, searchQuery]);
 
+  // Debounce search input
+  useEffect(() => {
+    const id = setTimeout(() => setSearchQuery(searchInput), 250);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  // Soft limit to avoid huge graphs locking UI
+  useEffect(() => {
+    const tooLarge = filteredGraph.nodes.length > 500 || filteredGraph.edges.length > 1000;
+    setLimitExceeded(tooLarge && !overrideLimit);
+  }, [filteredGraph, overrideLimit]);
+
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return;
     
@@ -55,8 +77,10 @@ export function GraphView({ data }: GraphViewProps) {
     const svg = d3.select(svgRef.current)
       .attr('width', width)
       .attr('height', height);
+    svgSelRef.current = svg as unknown as d3.Selection<SVGSVGElement, unknown, null, undefined>;
     
     const g = svg.append('g');
+    groupSelRef.current = g as unknown as d3.Selection<SVGGElement, unknown, null, undefined>;
     
     const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
@@ -66,6 +90,7 @@ export function GraphView({ data }: GraphViewProps) {
       });
     
     svg.call(zoomBehavior);
+    zoomBehaviorRef.current = zoomBehavior;
     
     const simulation = d3.forceSimulation<GraphNode>(filteredGraph.nodes)
       .force('link', d3.forceLink<GraphNode, GraphEdge>(filteredGraph.edges)
@@ -74,6 +99,7 @@ export function GraphView({ data }: GraphViewProps) {
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(d => (d as GraphNode).size + 10));
+    simulationRef.current = simulation;
     
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
     
@@ -128,6 +154,7 @@ export function GraphView({ data }: GraphViewProps) {
       .attr('dy', 4)
       .style('pointer-events', 'none');
     
+    let ticks = 0;
     simulation.on('tick', () => {
       link
         .attr('x1', d => (d.source as unknown as GraphNode).x || 0)
@@ -142,12 +169,35 @@ export function GraphView({ data }: GraphViewProps) {
       label
         .attr('x', d => d.x || 0)
         .attr('y', d => d.y || 0);
+
+      ticks += 1;
+      if (!isPaused && (ticks > 300 || simulation.alpha() < 0.03)) {
+        simulation.alphaTarget(0);
+        simulation.stop();
+        setIsPaused(true);
+      }
     });
     
     return () => {
       simulation.stop();
     };
-  }, [filteredGraph]);
+  }, [filteredGraph, renderTick, isPaused]);
+
+  // Keep the SVG sized when the container changes (resize/fullscreen)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setRenderTick((t) => t + 1));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Track fullscreen state
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   const handleZoomIn = useCallback(() => {
     if (!svgRef.current) return;
@@ -169,6 +219,54 @@ export function GraphView({ data }: GraphViewProps) {
     const zoom = d3.zoom<SVGSVGElement, unknown>();
     svg.transition().call(zoom.transform, d3.zoomIdentity);
   }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }, []);
+
+  const handleFit = useCallback(() => {
+    const svg = svgSelRef.current;
+    const g = groupSelRef.current;
+    const zoomB = zoomBehaviorRef.current;
+    if (!svg || !g || !zoomB) return;
+    const nodes = filteredGraph.nodes;
+    if (nodes.length === 0) return;
+    const minX = Math.min(...nodes.map(n => n.x ?? 0));
+    const maxX = Math.max(...nodes.map(n => n.x ?? 0));
+    const minY = Math.min(...nodes.map(n => n.y ?? 0));
+    const maxY = Math.max(...nodes.map(n => n.y ?? 0));
+    const bboxWidth = Math.max(10, maxX - minX);
+    const bboxHeight = Math.max(10, maxY - minY);
+    const width = (svgRef.current?.clientWidth || 800);
+    const height = (svgRef.current?.clientHeight || 600);
+    const scale = Math.min(4, Math.max(0.1, 0.9 * Math.min(width / bboxWidth, height / bboxHeight)));
+    const tx = (width - scale * (minX + maxX)) / 2;
+    const ty = (height - scale * (minY + maxY)) / 2;
+    const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
+    const svgSel = svgSelRef.current;
+    if (svgSel && zoomB) {
+      svgSel.transition().duration(400);
+      zoomB.transform(svgSel as d3.Selection<SVGSVGElement, unknown, null, undefined>, transform);
+    }
+  }, [filteredGraph]);
+
+  const handlePauseResume = useCallback(() => {
+    const sim = simulationRef.current;
+    if (!sim) return;
+    if (isPaused) {
+      setIsPaused(false);
+      sim.alpha(0.7).restart();
+    } else {
+      sim.stop();
+      setIsPaused(true);
+    }
+  }, [isPaused]);
 
   const handleExportSVG = useCallback(() => {
     if (!svgRef.current) return;
@@ -251,6 +349,19 @@ export function GraphView({ data }: GraphViewProps) {
             <Button variant="outline" size="sm" onClick={handleResetZoom}>
               <Maximize2 className="h-3 w-3" />
             </Button>
+            <Button variant="outline" size="sm" onClick={handleFit}>
+              <Maximize2 className="h-3 w-3 rotate-45" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePauseResume}>
+              {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleToggleFullscreen}>
+              {isFullscreen ? (
+                <Minimize className="h-3 w-3" />
+              ) : (
+                <Expand className="h-3 w-3" />
+              )}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportSVG}>
               <Download className="h-3 w-3 mr-1" />
               SVG
@@ -271,8 +382,8 @@ export function GraphView({ data }: GraphViewProps) {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search nodes..."
               className="w-full pl-10 pr-4 py-2 rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-ring text-sm"
             />
@@ -285,6 +396,16 @@ export function GraphView({ data }: GraphViewProps) {
       </div>
 
       <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+        {limitExceeded && !overrideLimit ? (
+          <div className="flex-1 border rounded-lg bg-muted/30 p-6 flex items-center justify-center text-center">
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Graph is large ({filteredGraph.nodes.length} nodes). Rendering is limited to prevent slowdowns.
+              </div>
+              <Button onClick={() => setOverrideLimit(true)} size="sm" variant="secondary">Render anyway</Button>
+            </div>
+          </div>
+        ) : (
         <div ref={containerRef} className="flex-1 border rounded-lg bg-muted/30 overflow-hidden relative">
           <svg ref={svgRef} className="w-full h-full" />
           
@@ -308,6 +429,7 @@ export function GraphView({ data }: GraphViewProps) {
             </div>
           </div>
         </div>
+        )}
 
         {selectedNode && (
           <div className="w-80 border rounded-lg p-4 bg-card space-y-3 overflow-auto">

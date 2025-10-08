@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Download, Copy, Check } from 'lucide-react';
+import { Download, Copy, Check, Expand, Minimize } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { JsonValue } from '@/store/json-store';
 import { inferSchema } from '@/lib/schema-inference';
@@ -22,17 +23,21 @@ export function DiagramView({ data }: DiagramViewProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [renderTick, setRenderTick] = useState(0);
+  const { theme } = useTheme();
 
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
-      theme: 'default',
+      theme: theme === 'dark' ? 'dark' : 'default',
       securityLevel: 'strict',
       fontFamily: 'ui-sans-serif, system-ui, sans-serif',
     });
     setIsInitialized(true);
-  }, []);
+  }, [theme]);
 
   const schema = useMemo(() => {
     return inferSchema(data);
@@ -76,7 +81,33 @@ export function DiagramView({ data }: DiagramViewProps) {
     };
 
     renderDiagram();
-  }, [mermaidCode, isInitialized]);
+  }, [mermaidCode, isInitialized, renderTick]);
+
+  // Resize observer to rerender diagram when container size changes (e.g., fullscreen)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setRenderTick((t) => t + 1));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Track fullscreen state
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }, []);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(mermaidCode);
@@ -142,8 +173,14 @@ export function DiagramView({ data }: DiagramViewProps) {
               Visual representation of your JSON structure
             </p>
           </div>
-          
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleToggleFullscreen}>
+              {isFullscreen ? (
+                <Minimize className="h-3 w-3" />
+              ) : (
+                <Expand className="h-3 w-3" />
+              )}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleCopy}>
               {copied ? (
                 <>
@@ -156,6 +193,24 @@ export function DiagramView({ data }: DiagramViewProps) {
                   Copy Code
                 </>
               )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const blob = new Blob([mermaidCode], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `diagram-${diagramType}.mmd`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Code
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadSVG}>
               <Download className="h-3 w-3 mr-1" />
@@ -196,7 +251,7 @@ export function DiagramView({ data }: DiagramViewProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div ref={containerRef} className="flex-1 overflow-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
           <div className="space-y-2">
             <h4 className="text-sm font-semibold">Mermaid Code</h4>

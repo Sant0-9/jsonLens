@@ -1,6 +1,7 @@
 "use client"
 
-import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType, Network, Share2, BarChart2, Shuffle, Zap } from 'lucide-react';
+import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType, Network, Share2, BarChart2, Shuffle, Zap, Gauge, Plus } from 'lucide-react';
+import { LiveWatcher } from './live-watcher';
 import { Button } from '@/components/ui/button';
 import { useJsonStore } from '@/store/json-store';
 import { formatBytes } from '@/lib/json-parser';
@@ -26,6 +27,13 @@ export function JsonToolbar() {
     }
   };
 
+  const handleNewFile = () => {
+    if (jsonData && !confirm('This will clear the current data. Are you sure you want to start with a new file?')) {
+      return;
+    }
+    clearData();
+  };
+
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b">
       <div className="space-y-1">
@@ -44,7 +52,7 @@ export function JsonToolbar() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1" data-view-switcher>
           <Button
             variant={view === 'tree' ? 'secondary' : 'ghost'}
             size="sm"
@@ -118,6 +126,14 @@ export function JsonToolbar() {
             Visualize
           </Button>
           <Button
+            variant={view === 'profiler' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setView('profiler')}
+          >
+            <Gauge className="h-4 w-4 mr-1" />
+            Profiler
+          </Button>
+          <Button
             variant={view === 'transform' ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setView('transform')}
@@ -134,6 +150,13 @@ export function JsonToolbar() {
             API
           </Button>
         </div>
+
+        <LiveWatcher />
+
+        <Button variant="outline" size="sm" onClick={handleNewFile}>
+          <Plus className="h-4 w-4 mr-1" />
+          New File
+        </Button>
 
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4 mr-1" />
