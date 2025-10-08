@@ -1,19 +1,31 @@
 "use client"
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { JsonValue } from '@/store/json-store';
-import { profileData, getNullRates, getNumericHistograms, getFieldFrequencies } from '@/lib/data-profiler';
+import { profileData, getNullRates, getNumericHistograms, getFieldFrequencies, detectOutliers, getOutlierSummary } from '@/lib/data-profiler';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, Legend } from 'recharts';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Zap, Settings, Loader2 } from 'lucide-react';
+import { llmService } from '@/lib/llm-service';
+import { LLMSettings } from '@/components/llm-settings';
 
 interface ProfilerViewProps {
   data: JsonValue;
 }
 
 export function ProfilerView({ data }: ProfilerViewProps) {
+  const [showLLMSettings, setShowLLMSettings] = useState(false);
+  const [aiInsights, setAiInsights] = useState<{ summary?: string; analysis?: string; suggestions?: string }>({});
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'suggestions'>('summary');
+
   const profile = useMemo(() => profileData(data), [data]);
   const nullRates = useMemo(() => getNullRates(profile), [profile]);
   const histograms = useMemo(() => getNumericHistograms(profile, 12), [profile]);
   const frequencies = useMemo(() => getFieldFrequencies(profile), [profile]);
+  const outliers = useMemo(() => detectOutliers(profile, 'zscore', 2), [profile]);
+  const outlierSummary = useMemo(() => getOutlierSummary(outliers), [outliers]);
 
   const explain = useMemo(() => {
     const lines: string[] = [];
@@ -26,8 +38,33 @@ export function ProfilerView({ data }: ProfilerViewProps) {
     if (numericFields.length) lines.push(`Numeric fields detected: ${numericFields.join(', ')}.`);
     if (frequencies.length) lines.push(`Categorical fields: ${frequencies.slice(0, 3).map(f => f.field).join(', ')}.`);
     if (profile.depth > 5) lines.push('Deeply nested structure detected; consider flattening for table operations.');
+    if (outlierSummary !== 'No significant outliers detected') lines.push(outlierSummary);
     return lines.join(' ');
-  }, [profile, nullRates, histograms, frequencies]);
+  }, [profile, nullRates, histograms, frequencies, outlierSummary]);
+
+  const handleGenerateInsight = async (type: 'summary' | 'analysis' | 'suggestions') => {
+    if (!llmService.isConfigured()) {
+      setShowLLMSettings(true);
+      return;
+    }
+
+    setIsGenerating(true);
+    setActiveTab(type);
+
+    try {
+      const response = await llmService.generateInsight(data, type);
+      if (response.success && response.content) {
+        setAiInsights(prev => ({
+          ...prev,
+          [type]: response.content
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to generate insight:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -43,6 +80,86 @@ export function ProfilerView({ data }: ProfilerViewProps) {
             {explain}
           </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              AI-Powered Insights
+            </CardTitle>
+            <CardDescription>
+              Get intelligent analysis and suggestions for your data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  variant={activeTab === 'summary' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleGenerateInsight('summary')}
+                  disabled={isGenerating}
+                >
+                  {isGenerating && activeTab === 'summary' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  Summary
+                </Button>
+                <Button
+                  variant={activeTab === 'analysis' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleGenerateInsight('analysis')}
+                  disabled={isGenerating}
+                >
+                  {isGenerating && activeTab === 'analysis' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  Analysis
+                </Button>
+                <Button
+                  variant={activeTab === 'suggestions' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleGenerateInsight('suggestions')}
+                  disabled={isGenerating}
+                >
+                  {isGenerating && activeTab === 'suggestions' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  Suggestions
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLLMSettings(true)}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              </div>
+
+              {aiInsights[activeTab] && (
+                <div className="mt-4 p-4 border rounded-md bg-muted/30">
+                  <h5 className="text-sm font-medium mb-2 capitalize">{activeTab}</h5>
+                  <p className="text-sm whitespace-pre-wrap">{aiInsights[activeTab]}</p>
+                </div>
+              )}
+
+              {!llmService.isConfigured() && (
+                <div className="mt-4 p-4 border rounded-md bg-yellow-50 dark:bg-yellow-900/20">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    AI features require configuration. Click Settings to add your API key.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <div>
           <h4 className="text-sm font-semibold mb-3">Null Rates</h4>
@@ -78,7 +195,56 @@ export function ProfilerView({ data }: ProfilerViewProps) {
             </div>
           );
         })}
+
+        {outliers.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold mb-3">Outlier Detection</h4>
+            <div className="space-y-4">
+              {outliers.map(outlier => {
+                const outlierCount = outlier.outliers.filter(o => o.isOutlier).length;
+                if (outlierCount === 0) return null;
+
+                return (
+                  <Card key={outlier.field}>
+                    <CardHeader>
+                      <CardTitle className="text-sm">
+                        {outlier.field} - {outlierCount} outliers detected
+                      </CardTitle>
+                      <CardDescription>
+                        Method: {outlier.method.toUpperCase()}, Threshold: {outlier.threshold}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {outlier.outliers
+                          .filter(o => o.isOutlier)
+                          .slice(0, 10)
+                          .map((outlierData, idx) => (
+                            <div key={idx} className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                              <span className="text-sm font-mono">{outlierData.value}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Z-Score: {outlierData.zScore.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        {outlierCount > 10 && (
+                          <p className="text-xs text-muted-foreground">
+                            ... and {outlierCount - 10} more outliers
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
+      {showLLMSettings && (
+        <LLMSettings onClose={() => setShowLLMSettings(false)} />
+      )}
     </div>
   );
 }

@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, FileJson, Clipboard } from 'lucide-react';
+import { Upload, FileJson, Clipboard, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJsonStore } from '@/store/json-store';
 import { parseJson } from '@/lib/json-parser';
+import { MermaidEditor } from '@/components/mermaid-editor';
 
 export function JsonImport() {
   const [isDragging, setIsDragging] = useState(false);
+  const [showMermaidEditor, setShowMermaidEditor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setJsonData, setError, setLoading, jsonData, clearData } = useJsonStore();
 
@@ -161,6 +163,10 @@ export function JsonImport() {
               <Clipboard className="mr-2 h-4 w-4" />
               Paste JSON
             </Button>
+            <Button onClick={() => setShowMermaidEditor(true)} variant="outline" size="lg">
+              <Code className="mr-2 h-4 w-4" />
+              Mermaid Editor
+            </Button>
             {jsonData && (
               <Button onClick={handleStartFresh} variant="destructive" size="lg">
                 <FileJson className="mr-2 h-4 w-4" />
@@ -188,7 +194,15 @@ export function JsonImport() {
           <div className="w-2 h-2 rounded-full bg-blue-500" />
           <span>Local processing only</span>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-purple-500" />
+          <span>Direct Mermaid editing</span>
+        </div>
       </div>
+
+      {showMermaidEditor && (
+        <MermaidEditor onClose={() => setShowMermaidEditor(false)} />
+      )}
     </div>
   );
 }

@@ -47,6 +47,18 @@ export interface NumericHistogram {
   bins: HistogramBin[];
 }
 
+export interface OutlierDetection {
+  field: string;
+  outliers: {
+    value: number;
+    index: number;
+    zScore: number;
+    isOutlier: boolean;
+  }[];
+  method: 'zscore' | 'iqr';
+  threshold: number;
+}
+
 function detectDateFormat(value: string): string | null {
   const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
   const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
@@ -335,4 +347,83 @@ export function getNumericHistograms(profile: DataProfile, binCount: number = 10
   });
 
   return result;
+}
+
+export function detectOutliers(profile: DataProfile, method: 'zscore' | 'iqr' = 'zscore', threshold: number = 2): OutlierDetection[] {
+  const results: OutlierDetection[] = [];
+
+  profile.fields.forEach((fieldProfile, fieldName) => {
+    if (!fieldProfile.numericStats) return;
+
+    const values = fieldProfile.sampleValues
+      .filter(v => typeof v === 'number' && !isNaN(v))
+      .map(v => v as number);
+
+    if (values.length < 3) return;
+
+    const outliers: OutlierDetection['outliers'] = [];
+
+    if (method === 'zscore') {
+      const mean = fieldProfile.numericStats.avg;
+      const stdDev = Math.sqrt(
+        values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
+      );
+
+      values.forEach((value, index) => {
+        const zScore = Math.abs((value - mean) / stdDev);
+        outliers.push({
+          value,
+          index,
+          zScore,
+          isOutlier: zScore > threshold
+        });
+      });
+    } else if (method === 'iqr') {
+      const sortedValues = [...values].sort((a, b) => a - b);
+      const q1Index = Math.floor(sortedValues.length * 0.25);
+      const q3Index = Math.floor(sortedValues.length * 0.75);
+      const q1 = sortedValues[q1Index];
+      const q3 = sortedValues[q3Index];
+      const iqr = q3 - q1;
+      const lowerBound = q1 - threshold * iqr;
+      const upperBound = q3 + threshold * iqr;
+
+      values.forEach((value, index) => {
+        const isOutlier = value < lowerBound || value > upperBound;
+        outliers.push({
+          value,
+          index,
+          zScore: 0, // Not calculated for IQR method
+          isOutlier
+        });
+      });
+    }
+
+    results.push({
+      field: fieldName,
+      outliers,
+      method,
+      threshold
+    });
+  });
+
+  return results;
+}
+
+export function getOutlierSummary(outliers: OutlierDetection[]): string {
+  const summary: string[] = [];
+  
+  outliers.forEach(detection => {
+    const outlierCount = detection.outliers.filter(o => o.isOutlier).length;
+    const totalCount = detection.outliers.length;
+    const percentage = totalCount > 0 ? (outlierCount / totalCount * 100).toFixed(1) : '0';
+    
+    if (outlierCount > 0) {
+      summary.push(`${detection.field}: ${outlierCount}/${totalCount} (${percentage}%) outliers`);
+    }
+  });
+
+  return summary.length > 0 
+    ? `Outliers detected: ${summary.join(', ')}`
+    : 'No significant outliers detected';
 }
