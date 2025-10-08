@@ -17,6 +17,7 @@ import { VisualizationView } from './visualization-view';
 import { TransformView } from './transform-view';
 import { ProfilerView } from './profiler-view';
 import { ApiPlaygroundView } from './api-playground-view';
+import { NLQView } from './nlq-view';
 
 export function JsonViewer() {
   const { jsonData, error, isLoading, view, loadFromIndexedDB, fileName, userClearedData } = useJsonStore();
@@ -70,6 +71,7 @@ export function JsonViewer() {
         {view === 'transform' && <TransformView data={jsonData} />}
         {view === 'api' && <ApiPlaygroundView data={jsonData} />}
         {view === 'profiler' && <ProfilerView data={jsonData} />}
+        {view === 'nlq' && <NLQView data={jsonData} />}
       </div>
       
       {/* Show import area below the main content for loading new files */}

@@ -1,8 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+interface LLMConfig {
+  apiKey: string
+  provider: string
+  model: string
+}
+
+interface LLMRequest {
+  prompt: string
+  maxTokens: number
+  temperature: number
+}
+
+async function callOpenAI(apiKey: string, model: string, prompt: string, maxTokens: number, temperature: number) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: maxTokens,
+      temperature,
+    })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error?.message || `OpenAI API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return {
+    content: data.choices[0]?.message?.content || '',
+    usage: data.usage
+  }
+}
+
+async function callAnthropic(apiKey: string, model: string, prompt: string, maxTokens: number, temperature: number) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      temperature,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error?.message || `Anthropic API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return {
+    content: data.content[0]?.text || '',
+    usage: data.usage
+  }
+}
+
+async function callLocalModel(apiKey: string, model: string, prompt: string) {
+  // For local models, we'll use a simple mock response
+  // In a real implementation, you would call your local model endpoint
+  return {
+    content: `Local model analysis (${model}): This JSON data contains structured information that would benefit from visualization. The data structure suggests using tree views for hierarchical data or table views for tabular data.`,
+    usage: {
+      prompt_tokens: Math.ceil(prompt.length / 4),
+      completion_tokens: 50,
+      total_tokens: Math.ceil(prompt.length / 4) + 50
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { config, request: llmRequest } = await request.json()
+    const { config, request: llmRequest }: { config: LLMConfig; request: LLMRequest } = await request.json()
 
     if (!config || !llmRequest) {
       return NextResponse.json(
@@ -11,62 +101,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { prompt } = llmRequest
+    const { prompt, maxTokens, temperature } = llmRequest
+    const { apiKey, provider, model } = config
 
-    // For demo purposes, we'll return a simulated response
-    // In a real implementation, you would make actual API calls to OpenAI, Anthropic, etc.
-    
-    let content = ''
-    
-    if (prompt.includes('summary')) {
-      content = `This JSON data appears to contain structured information that could benefit from visualization. The data structure suggests it would work well with tree views for hierarchical data or table views for tabular data. Consider using different visualization types based on the data patterns.`
-    } else if (prompt.includes('analysis')) {
-      content = `Analysis reveals several interesting patterns in your data:
+    let result
 
-1. **Data Structure**: The JSON contains well-organized nested objects with consistent field names
-2. **Data Types**: Mix of strings, numbers, and boolean values suggests rich metadata
-3. **Relationships**: Clear parent-child relationships that would work well in a graph visualization
-4. **Potential Issues**: Some fields appear to be optional based on the structure
+    try {
+      switch (provider) {
+        case 'openai':
+          result = await callOpenAI(apiKey, model, prompt, maxTokens, temperature)
+          break
+        case 'anthropic':
+          result = await callAnthropic(apiKey, model, prompt, maxTokens, temperature)
+          break
+        case 'local':
+          result = await callLocalModel(apiKey, model, prompt)
+          break
+        default:
+          throw new Error(`Unsupported provider: ${provider}`)
+      }
 
-Recommendations:
-- Use tree view for hierarchical exploration
-- Consider table view for tabular data analysis
-- Graph view would highlight relationships between entities`
-    } else if (prompt.includes('suggestions')) {
-      content = `Based on your JSON data structure, here are some suggestions:
+      return NextResponse.json({
+        success: true,
+        content: result.content,
+        usage: result.usage
+      })
 
-**Visualization Recommendations:**
-- Tree View: Perfect for exploring nested object structures
-- Table View: Ideal if you have arrays of similar objects
-- Graph View: Great for showing relationships between entities
-- Diagram View: Use Mermaid diagrams to visualize data flow
-
-**Data Improvements:**
-- Consider adding timestamps for temporal analysis
-- Include unique identifiers for better tracking
-- Add metadata fields for better categorization
-
-**Analysis Opportunities:**
-- Look for patterns in numeric fields
-- Identify outliers in your data
-- Check for data quality issues`
-    } else {
-      content = `This JSON data shows interesting patterns that could be explored through various visualization methods. The structure suggests it contains meaningful information that would benefit from interactive exploration.`
+    } catch (apiError) {
+      console.error('LLM API Error:', apiError)
+      return NextResponse.json(
+        { 
+          error: apiError instanceof Error ? apiError.message : 'API call failed',
+          success: false 
+        },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({
-      success: true,
-      content,
-      usage: {
-        promptTokens: Math.ceil(prompt.length / 4),
-        completionTokens: Math.ceil(content.length / 4),
-        totalTokens: Math.ceil((prompt.length + content.length) / 4)
-      }
-    })
-
-  } catch {
+  } catch (error) {
+    console.error('LLM Generate Error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate content' },
+      { 
+        error: 'Failed to generate content',
+        success: false 
+      },
       { status: 500 }
     )
   }

@@ -64,7 +64,8 @@ class LLMService {
       })
 
       if (!response.ok) {
-        throw new Error('LLM request failed')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
       const result = await response.json()

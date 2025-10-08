@@ -1,6 +1,6 @@
 "use client"
 
-import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType, Network, Share2, BarChart2, Shuffle, Zap, Gauge, Plus } from 'lucide-react';
+import { List, Table2, FileText, Download, Trash2, GitCompare, Search, FileType, Network, Share2, BarChart2, Shuffle, Zap, Gauge, Plus, MessageSquare } from 'lucide-react';
 import { LiveWatcher } from './live-watcher';
 import { Button } from '@/components/ui/button';
 import { useJsonStore } from '@/store/json-store';
@@ -148,6 +148,14 @@ export function JsonToolbar() {
           >
             <Zap className="h-4 w-4 mr-1" />
             API
+          </Button>
+          <Button
+            variant={view === 'nlq' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setView('nlq')}
+          >
+            <MessageSquare className="h-4 w-4 mr-1" />
+            Ask
           </Button>
         </div>
 
