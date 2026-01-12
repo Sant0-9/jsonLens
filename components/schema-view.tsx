@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Download, Copy, Check, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { JsonValue } from '@/store/json-store';
@@ -138,7 +138,7 @@ export function SchemaView({ data }: SchemaViewProps) {
     );
   };
 
-  const renderSchema = (schema: InferredSchema, depth: number = 0): JSX.Element => {
+  const renderSchema = (schema: InferredSchema, depth: number = 0): React.JSX.Element => {
     if (schema.type === 'object' && schema.fields) {
       return (
         <div className="space-y-1">
