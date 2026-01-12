@@ -6,29 +6,42 @@ import { useJsonStore } from '@/store/json-store';
 import { parseJson } from '@/lib/json-parser';
 import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 
-type FileHandleWithName = FileSystemFileHandle;
+// File System Access API types
+interface FilePickerOptions {
+  types?: Array<{
+    description: string;
+    accept: Record<string, string[]>;
+  }>;
+  excludeAcceptAllOption?: boolean;
+  multiple?: boolean;
+}
+
+declare global {
+  interface Window {
+    showOpenFilePicker?: (options?: FilePickerOptions) => Promise<FileSystemFileHandle[]>;
+  }
+}
 
 export function LiveWatcher() {
   const { setJsonData } = useJsonStore();
   const [watching, setWatching] = useState(false);
   const [fileName, setFileName] = useState<string>('');
   const [lastModified, setLastModified] = useState<number | null>(null);
-  const handleRef = useRef<FileHandleWithName | null>(null);
+  const handleRef = useRef<FileSystemFileHandle | null>(null);
   const intervalRef = useRef<number | null>(null);
 
   const pickFile = useCallback(async () => {
+    if (!window.showOpenFilePicker) {
+      return; // Browser doesn't support File System Access API
+    }
     try {
-      // @ts-expect-error File System Access API - may not exist in all browsers
-      const [handle]: FileHandleWithName[] = await window.showOpenFilePicker({
+      const [handle] = await window.showOpenFilePicker({
         types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
         excludeAcceptAllOption: false,
         multiple: false,
       });
       handleRef.current = handle;
-      // Some TS DOM lib versions type `name` on FileSystemFileHandle; fall back defensively
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const h: any = handle;
-      setFileName((h.name as string) || 'watched.json');
+      setFileName(handle.name || 'watched.json');
       setWatching(true);
     } catch {
       // user cancelled
@@ -74,19 +87,34 @@ export function LiveWatcher() {
   }, [watching, checkForChanges]);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" role="group" aria-label="Live file watcher">
       {watching ? (
         <>
-          <Button variant="outline" size="sm" onClick={checkForChanges} title="Refresh now">
-            <RefreshCw className="h-3 w-3 mr-1" /> Refresh
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={checkForChanges}
+            aria-label="Refresh file now"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" aria-hidden="true" /> Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={stopWatching} title="Stop watching">
-            <EyeOff className="h-3 w-3 mr-1" /> Stop {fileName && <span className="ml-1 truncate max-w-[120px]">{fileName}</span>}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={stopWatching}
+            aria-label={`Stop watching ${fileName || 'file'}`}
+          >
+            <EyeOff className="h-3 w-3 mr-1" aria-hidden="true" /> Stop {fileName && <span className="ml-1 truncate max-w-[120px]">{fileName}</span>}
           </Button>
         </>
       ) : (
-        <Button variant="outline" size="sm" onClick={pickFile} title="Watch a local JSON file for changes">
-          <Eye className="h-3 w-3 mr-1" /> Watch File
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={pickFile}
+          aria-label="Watch a local JSON file for changes"
+        >
+          <Eye className="h-3 w-3 mr-1" aria-hidden="true" /> Watch File
         </Button>
       )}
     </div>

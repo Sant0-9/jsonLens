@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, Copy, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { JsonValue } from '@/store/json-store';
@@ -40,6 +40,13 @@ function TreeNode({ keyName, value, path, level, searchQuery }: TreeNodeProps) {
     setIsExpanded((prev) => !prev);
   }, []);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleExpand();
+    }
+  }, [toggleExpand]);
+
   const isExpandable = isJsonObject(value) || isJsonArray(value);
   const valueType = typeof value;
   const isNull = value === null;
@@ -57,16 +64,19 @@ function TreeNode({ keyName, value, path, level, searchQuery }: TreeNodeProps) {
         {isExpandable ? (
           <button
             onClick={toggleExpand}
-            className="flex items-center justify-center w-4 h-4 hover:bg-accent rounded transition-colors"
+            onKeyDown={handleKeyDown}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${keyName}`}
+            className="flex items-center justify-center w-4 h-4 hover:bg-accent rounded transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {isExpanded ? (
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3 w-3" aria-hidden="true" />
             ) : (
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-3 w-3" aria-hidden="true" />
             )}
           </button>
         ) : (
-          <span className="w-4" />
+          <span className="w-4" aria-hidden="true" />
         )}
 
         <span className="text-blue-600 dark:text-blue-400 font-medium">
@@ -164,19 +174,45 @@ interface TreeViewProps {
 export function TreeView({ data }: TreeViewProps) {
   const { searchQuery, setSearchQuery } = useJsonStore();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Sync local search with store on mount
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalSearch(value);
-    setSearchQuery(value);
-  };
+
+    // Debounce the store update
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(value);
+    }, 300);
+  }, [setSearchQuery]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
       <div className="border-b p-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <label htmlFor="tree-search" className="sr-only">
+            Search keys or values
+          </label>
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <input
+            id="tree-search"
             type="text"
             placeholder="Search keys or values..."
             value={localSearch}

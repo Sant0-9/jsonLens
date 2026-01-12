@@ -35,9 +35,14 @@ export function JsonImport() {
 
   const handleFile = useCallback(
     (file: File) => {
-      if (!file.name.endsWith('.json')) {
+      // Accept .json, .jsonl, .ndjson, or files with no extension
+      const validExtensions = ['.json', '.jsonl', '.ndjson', '.geojson'];
+      const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      const hasNoExtension = !file.name.includes('.') || file.name.startsWith('.');
+
+      if (!hasValidExtension && !hasNoExtension) {
         setError({
-          message: 'Please select a valid JSON file',
+          message: `Unsupported file type. Accepted formats: ${validExtensions.join(', ')} or files without extension`,
         });
         return;
       }
@@ -104,7 +109,7 @@ export function JsonImport() {
       processJsonText(text);
     } catch {
       setError({
-        message: 'Failed to read from clipboard. Please check permissions.',
+        message: 'Failed to read from clipboard. Please allow clipboard access in your browser settings, or try copying the JSON and using Ctrl/Cmd+V.',
       });
     }
   }, [processJsonText, setError]);
@@ -175,13 +180,21 @@ export function JsonImport() {
             )}
           </div>
 
+          <label htmlFor="json-file-input" className="sr-only">
+            Select a JSON file
+          </label>
           <input
+            id="json-file-input"
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.jsonl,.ndjson,.geojson,application/json"
             onChange={handleFileSelect}
             className="hidden"
+            aria-describedby="file-formats"
           />
+          <span id="file-formats" className="sr-only">
+            Accepted formats: JSON, JSONL, NDJSON, GeoJSON
+          </span>
         </div>
       </div>
 

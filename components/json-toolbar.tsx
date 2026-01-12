@@ -52,7 +52,7 @@ export function JsonToolbar() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1" data-view-switcher>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1" data-view-switcher role="group" aria-label="View options">
           <Button
             variant={view === 'tree' ? 'secondary' : 'ghost'}
             size="sm"

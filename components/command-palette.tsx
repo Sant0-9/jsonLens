@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Command } from "cmdk"
 import { useJsonStore } from "@/store/json-store"
 import { 
@@ -69,22 +69,23 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down)
   }, [])
 
-  const getItemCount = () => {
-    if (!jsonData) return 0
-    if (Array.isArray(jsonData)) return jsonData.length
-    if (typeof jsonData === "object") return Object.keys(jsonData).length
-    return 1
-  }
+  const commands: CommandItem[] = useMemo(() => {
+    const getItemCount = () => {
+      if (!jsonData) return 0
+      if (Array.isArray(jsonData)) return jsonData.length
+      if (typeof jsonData === "object") return Object.keys(jsonData).length
+      return 1
+    }
 
-  const getFileSizeFormatted = () => {
-    if (fileSize === 0) return "No file"
-    const kb = fileSize / 1024
-    const mb = kb / 1024
-    if (mb >= 1) return `${mb.toFixed(1)} MB`
-    return `${kb.toFixed(1)} KB`
-  }
+    const getFileSizeFormatted = () => {
+      if (fileSize === 0) return "No file"
+      const kb = fileSize / 1024
+      const mb = kb / 1024
+      if (mb >= 1) return `${mb.toFixed(1)} MB`
+      return `${kb.toFixed(1)} KB`
+    }
 
-  const commands: CommandItem[] = [
+    return [
     // View Commands
     {
       id: "view-tree",
@@ -235,8 +236,7 @@ export function CommandPalette() {
       description: "Save current workspace state",
       icon: <Save className="h-4 w-4" />,
       action: () => {
-        // Workspace is auto-saved, but we can show a confirmation
-        console.log("Workspace auto-saved")
+        // Workspace is auto-saved - no action needed
       },
       keywords: ["save", "workspace", "state"],
       category: "Data"
@@ -285,8 +285,8 @@ export function CommandPalette() {
       description: "Open help documentation and shortcuts",
       icon: <HelpCircle className="h-4 w-4" />,
       action: () => {
-        // This could open a help modal or navigate to help page
-        console.log("Show help")
+        // Open help - could navigate to docs or open a modal
+        window.open('https://github.com/anthropics/claude-code/issues', '_blank')
       },
       keywords: ["help", "documentation", "guide", "shortcuts"],
       category: "Help"
@@ -308,17 +308,19 @@ export function CommandPalette() {
       keywords: ["info", "dataset", "file", "size", "count"],
       category: "Help"
     }
-  ]
+  ]}, [setView, clearData, jsonData, theme, setTheme, fileName, fileSize, error, setSearchQuery])
 
-  const filteredCommands = commands.filter((command) => {
-    if (!query) return true
-    const searchTerms = query.toLowerCase().split(" ")
-    return searchTerms.every(term =>
-      command.title.toLowerCase().includes(term) ||
-      command.description.toLowerCase().includes(term) ||
-      command.keywords.some(keyword => keyword.toLowerCase().includes(term))
-    )
-  })
+  const filteredCommands = useMemo(() => {
+    return commands.filter((command) => {
+      if (!query) return true
+      const searchTerms = query.toLowerCase().split(" ")
+      return searchTerms.every(term =>
+        command.title.toLowerCase().includes(term) ||
+        command.description.toLowerCase().includes(term) ||
+        command.keywords.some(keyword => keyword.toLowerCase().includes(term))
+      )
+    })
+  }, [commands, query])
 
   const groupedCommands = filteredCommands.reduce((acc, command) => {
     if (!acc[command.category]) {
@@ -341,7 +343,13 @@ export function CommandPalette() {
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setOpen(false)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/50"
+          onClick={() => setOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Command palette"
+        >
           <div
             className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg"
             onClick={(e) => e.stopPropagation()}

@@ -90,25 +90,8 @@ export function useKeyboardShortcuts() {
         }
       }
 
-      // Space to toggle expand/collapse in tree view
-      if (e.key === " " && view === "tree") {
-        e.preventDefault()
-        // This would need to be implemented in the tree view component
-        // to toggle the currently focused node
-      }
-
-      // Arrow keys for navigation (in tree/table views)
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        // This would need to be implemented in the respective view components
-        // to navigate between items
-      }
-
-      // Enter to expand/collapse in tree view
-      if (e.key === "Enter" && view === "tree") {
-        e.preventDefault()
-        // This would need to be implemented in the tree view component
-        // to expand/collapse the currently focused node
-      }
+      // Space/Enter to toggle expand/collapse - handled directly in tree-view.tsx
+      // Arrow keys navigation - not yet implemented at global level
     }
 
     document.addEventListener("keydown", handleKeyDown)
@@ -123,7 +106,5 @@ export const keyboardShortcuts = {
   "Cmd+F": "Focus search",
   "Escape": "Clear search or close modals",
   "Cmd+Delete": "Clear all data",
-  "Space": "Toggle expand/collapse (Tree view)",
-  "Arrow Keys": "Navigate items (Tree/Table views)",
-  "Enter": "Expand/collapse node (Tree view)"
+  "Space/Enter": "Toggle expand/collapse on focused node (Tree view)"
 }

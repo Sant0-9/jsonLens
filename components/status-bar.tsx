@@ -4,7 +4,7 @@ import { useJsonStore } from "@/store/json-store"
 import { FileText, AlertCircle, CheckCircle, Clock, Save } from "lucide-react"
 
 export function StatusBar() {
-  const { jsonData, fileName, fileSize, error, isLoading, lastSaved, hasUnsavedChanges } = useJsonStore()
+  const { jsonData, fileName, fileSize, error, isLoading, lastSaved, hasUnsavedChanges, saveError, clearSaveError } = useJsonStore()
 
   const getItemCount = () => {
     if (!jsonData) return 0
@@ -72,7 +72,16 @@ export function StatusBar() {
             </div>
           )}
           
-          {jsonData && (
+          {saveError ? (
+            <button
+              onClick={clearSaveError}
+              className="flex items-center space-x-1 text-red-500 hover:text-red-600 transition-colors"
+              title="Click to dismiss"
+            >
+              <AlertCircle className="h-3 w-3" />
+              <span className="max-w-48 truncate">{saveError}</span>
+            </button>
+          ) : jsonData && (
             <div className="flex items-center space-x-1">
               {hasUnsavedChanges ? (
                 <>

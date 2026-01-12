@@ -10,21 +10,28 @@ interface NLQViewProps {
 }
 
 export function NLQView({ data }: NLQViewProps) {
-  const { setView } = useJsonStore()
+  const { setView, setVisualizationConfig } = useJsonStore()
 
   const handleVisualize = (suggestion: VisualizationSuggestion) => {
-    // Switch to visualization view with the suggested configuration
+    // Set visualization config before switching view
+    setVisualizationConfig({
+      chartType: suggestion.chartType,
+      xField: suggestion.config.xField as string | undefined,
+      yField: suggestion.config.yField as string | undefined,
+      groupBy: suggestion.config.groupBy as string | undefined,
+    })
     setView('visualize')
-    // TODO: Pass the suggestion configuration to the visualization view
-    console.log('Visualization suggestion:', suggestion)
   }
 
   const handleQuery = (intent: QueryIntent) => {
-    // Process the query intent
-    console.log('Query intent:', intent)
-    
-    // For now, just switch to appropriate view based on intent
+    // Set visualization config if chart type is specified
     if (intent.chartType) {
+      setVisualizationConfig({
+        chartType: intent.chartType,
+        xField: intent.fields?.[0],
+        yField: intent.fields?.[1],
+        groupBy: intent.groupBy?.[0],
+      })
       setView('visualize')
     } else if (intent.action === 'filter' || intent.action === 'aggregate') {
       setView('query')
@@ -35,8 +42,8 @@ export function NLQView({ data }: NLQViewProps) {
 
   return (
     <div className="p-6">
-      <NaturalLanguageQuery 
-        data={data} 
+      <NaturalLanguageQuery
+        data={data}
         onVisualize={handleVisualize}
         onQuery={handleQuery}
       />

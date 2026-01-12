@@ -29,11 +29,20 @@ export interface JsonState {
   // Search and filter
   searchQuery: string;
   filterPath: string;
+
+  // Visualization config (set from NLQ)
+  visualizationConfig: {
+    chartType?: string;
+    xField?: string;
+    yField?: string;
+    groupBy?: string;
+  } | null;
   
   // Autosave state
   lastSaved: number | null;
   hasUnsavedChanges: boolean;
-  
+  saveError: string | null;
+
   // User intent state
   userClearedData: boolean;
   
@@ -49,6 +58,8 @@ export interface JsonState {
   markAsSaved: () => void;
   markAsChanged: () => void;
   setUserClearedData: (cleared: boolean) => void;
+  clearSaveError: () => void;
+  setVisualizationConfig: (config: JsonState['visualizationConfig']) => void;
 }
 
 export const useJsonStore = create<JsonState>()(
@@ -64,8 +75,10 @@ export const useJsonStore = create<JsonState>()(
       error: null,
       searchQuery: '',
       filterPath: '',
+      visualizationConfig: null,
       lastSaved: null,
       hasUnsavedChanges: false,
+      saveError: null,
       userClearedData: false,
 
       // Actions
@@ -91,9 +104,9 @@ export const useJsonStore = create<JsonState>()(
             fileSize,
             timestamp: Date.now(),
           }).then(() => {
-            set({ lastSaved: Date.now(), hasUnsavedChanges: false });
-          }).catch((error) => {
-            console.error('Failed to save to IndexedDB:', error);
+            set({ lastSaved: Date.now(), hasUnsavedChanges: false, saveError: null });
+          }).catch((err) => {
+            set({ saveError: `Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}` });
           });
         }
       },
@@ -122,7 +135,7 @@ export const useJsonStore = create<JsonState>()(
       
       loadFromIndexedDB: async () => {
         if (typeof window === 'undefined') return;
-        
+
         try {
           const lastData = await getLastJsonData();
           if (lastData) {
@@ -134,10 +147,11 @@ export const useJsonStore = create<JsonState>()(
               error: null,
               hasUnsavedChanges: false,
               lastSaved: lastData.timestamp,
+              saveError: null,
             });
           }
-        } catch (error) {
-          console.error('Failed to load from IndexedDB:', error);
+        } catch (err) {
+          set({ saveError: `Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}` });
         }
       },
 
@@ -149,6 +163,10 @@ export const useJsonStore = create<JsonState>()(
       markAsChanged: () => set({ hasUnsavedChanges: true }),
 
       setUserClearedData: (userClearedData) => set({ userClearedData }),
+
+      clearSaveError: () => set({ saveError: null }),
+
+      setVisualizationConfig: (visualizationConfig) => set({ visualizationConfig }),
     }),
     {
       name: 'jsonlens-storage',

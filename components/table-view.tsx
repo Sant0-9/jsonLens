@@ -121,30 +121,37 @@ export function TableView({ data }: TableViewProps) {
       <table className="w-full border-collapse text-sm">
         <thead className="bg-muted/50 sticky top-0 z-10">
           <tr>
-            {columns.map((column) => (
-              <th
-                key={column}
-                className="text-left p-3 font-semibold border-b"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 hover:bg-transparent"
-                  onClick={() => handleSort(column)}
+            {columns.map((column) => {
+              const ariaSort = sortColumn === column
+                ? (sortDirection === 'asc' ? 'ascending' : 'descending')
+                : undefined;
+              return (
+                <th
+                  key={column}
+                  className="text-left p-3 font-semibold border-b"
+                  aria-sort={ariaSort}
                 >
-                  <span className="mr-2">{column}</span>
-                  {sortColumn === column ? (
-                    sortDirection === 'asc' ? (
-                      <ArrowUp className="h-3 w-3" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 hover:bg-transparent focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    onClick={() => handleSort(column)}
+                    aria-label={`Sort by ${column}${sortColumn === column ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
+                  >
+                    <span className="mr-2">{column}</span>
+                    {sortColumn === column ? (
+                      sortDirection === 'asc' ? (
+                        <ArrowUp className="h-3 w-3" aria-hidden="true" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" aria-hidden="true" />
+                      )
                     ) : (
-                      <ArrowDown className="h-3 w-3" />
-                    )
-                  ) : (
-                    <ArrowUpDown className="h-3 w-3 opacity-30" />
-                  )}
-                </Button>
-              </th>
-            ))}
+                      <ArrowUpDown className="h-3 w-3 opacity-30" aria-hidden="true" />
+                    )}
+                  </Button>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>

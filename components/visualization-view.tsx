@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { TrendingUp, BarChart3, Calendar, Expand, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { JsonValue } from '@/store/json-store';
+import { JsonValue, useJsonStore } from '@/store/json-store';
 import { 
   profileData, 
   getFieldFrequencies, 
@@ -35,11 +35,30 @@ type VisualizationType = 'treemap' | 'heatmap' | 'timeline';
 const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57', '#ffc658'];
 
 export function VisualizationView({ data }: VisualizationViewProps) {
+  const { visualizationConfig, setVisualizationConfig } = useJsonStore();
   const [vizType, setVizType] = useState<VisualizationType>('treemap');
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [, setResizeTick] = useState(0);
   const [showExplain, setShowExplain] = useState(false);
+
+  // Apply visualization config from NLQ when component mounts
+  useEffect(() => {
+    if (visualizationConfig?.chartType) {
+      const chartTypeMap: Record<string, VisualizationType> = {
+        'bar': 'heatmap',
+        'line': 'timeline',
+        'pie': 'treemap',
+        'treemap': 'treemap',
+        'heatmap': 'heatmap',
+        'timeline': 'timeline',
+      };
+      const mappedType = chartTypeMap[visualizationConfig.chartType] || 'treemap';
+      setVizType(mappedType);
+      // Clear config after applying
+      setVisualizationConfig(null);
+    }
+  }, [visualizationConfig, setVisualizationConfig]);
 
   const profile = useMemo(() => profileData(data), [data]);
   const treemapData = useMemo(() => getTreemapData(data), [data]);

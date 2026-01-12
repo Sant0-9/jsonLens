@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (apiError) {
-      console.error('LLM API Error:', apiError)
       return NextResponse.json(
         { 
           error: apiError instanceof Error ? apiError.message : 'API call failed',
@@ -138,8 +137,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  } catch (error) {
-    console.error('LLM Generate Error:', error)
+  } catch {
     return NextResponse.json(
       { 
         error: 'Failed to generate content',

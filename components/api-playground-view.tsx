@@ -23,6 +23,7 @@ export function ApiPlaygroundView({}: ApiPlaygroundViewProps) {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [headerError, setHeaderError] = useState<string>('');
   const [snapshots, setSnapshots] = useState<ApiSnapshot[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('default');
@@ -85,6 +86,20 @@ export function ApiPlaygroundView({}: ApiPlaygroundViewProps) {
       return;
     }
 
+    // Validate URL format
+    try {
+      new URL(request.url);
+    } catch {
+      setError('Invalid URL format. Please enter a valid URL (e.g., https://api.example.com/endpoint)');
+      return;
+    }
+
+    // Check for header errors
+    if (headerError) {
+      setError('Please fix the invalid JSON in headers before sending');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setResponse(null);
@@ -119,7 +134,7 @@ export function ApiPlaygroundView({}: ApiPlaygroundViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [request, environments, selectedEnvironment]);
+  }, [request, environments, selectedEnvironment, headerError]);
 
   const handleSaveSnapshot = useCallback(() => {
     if (!response) return;
@@ -397,13 +412,19 @@ export function ApiPlaygroundView({}: ApiPlaygroundViewProps) {
                     try {
                       const headers = JSON.parse(e.target.value);
                       setRequest(prev => ({ ...prev, headers }));
+                      setHeaderError('');
                     } catch {
-                      // Invalid JSON, ignore
+                      setHeaderError('Invalid JSON format');
                     }
                   }}
-                  className="w-full h-20 px-3 py-2 border rounded text-sm font-mono"
+                  className={`w-full h-20 px-3 py-2 border rounded text-sm font-mono ${headerError ? 'border-red-500' : ''}`}
                   placeholder='{"Accept": "application/json", "Authorization": "Bearer token"}'
+                  aria-invalid={!!headerError}
+                  aria-describedby={headerError ? 'header-error' : undefined}
                 />
+                {headerError && (
+                  <p id="header-error" className="text-red-500 text-xs mt-1">{headerError}</p>
+                )}
               </div>
 
               {(request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') && (

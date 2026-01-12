@@ -45,8 +45,8 @@ export function NaturalLanguageQuery({ data, onVisualize, onQuery }: NaturalLang
       const intent = naturalLanguageProcessor.parseQuery(query, data)
       setLastIntent(intent)
       onQuery(intent)
-    } catch (error) {
-      console.error('Failed to process query:', error)
+    } catch {
+      // Query processing failed - silent failure, user can retry
     } finally {
       setIsProcessing(false)
     }

@@ -14,6 +14,8 @@ interface WorkspaceTab {
   jsonData: JsonValue | null
   rawJson: string
   view: JsonState["view"]
+  searchQuery: string
+  filterPath: string
   lastModified: number
 }
 
@@ -27,16 +29,20 @@ export function WorkspaceTabs() {
     fileName,
     fileSize,
     view,
+    searchQuery,
+    filterPath,
     setJsonData,
     setView,
+    setSearchQuery,
+    setFilterPath,
     clearData
   } = useJsonStore()
 
   // Save current state to active tab when data changes
   const saveToActiveTab = useCallback(() => {
     if (activeTabId && jsonData) {
-      setTabs(prev => prev.map(tab => 
-        tab.id === activeTabId 
+      setTabs(prev => prev.map(tab =>
+        tab.id === activeTabId
           ? {
               ...tab,
               jsonData,
@@ -44,12 +50,14 @@ export function WorkspaceTabs() {
               fileName,
               fileSize,
               view,
+              searchQuery,
+              filterPath,
               lastModified: Date.now()
             }
           : tab
       ))
     }
-  }, [activeTabId, jsonData, rawJson, fileName, fileSize, view])
+  }, [activeTabId, jsonData, rawJson, fileName, fileSize, view, searchQuery, filterPath])
 
   // Create new tab
   const createNewTab = () => {
@@ -61,12 +69,16 @@ export function WorkspaceTabs() {
       jsonData: null,
       rawJson: "",
       view: "tree",
+      searchQuery: "",
+      filterPath: "",
       lastModified: Date.now()
     }
-    
+
     setTabs(prev => [...prev, newTab])
     setActiveTabId(newTab.id)
     clearData()
+    setSearchQuery("")
+    setFilterPath("")
   }
 
   // Switch to tab
@@ -80,6 +92,9 @@ export function WorkspaceTabs() {
       } else {
         clearData()
       }
+      // Restore search/filter state
+      setSearchQuery(tab.searchQuery)
+      setFilterPath(tab.filterPath)
     }
   }
 
@@ -97,9 +112,14 @@ export function WorkspaceTabs() {
           } else {
             clearData()
           }
+          // Restore search/filter state
+          setSearchQuery(nextTab.searchQuery)
+          setFilterPath(nextTab.filterPath)
         } else {
           setActiveTabId(null)
           clearData()
+          setSearchQuery("")
+          setFilterPath("")
         }
       }
       return newTabs
