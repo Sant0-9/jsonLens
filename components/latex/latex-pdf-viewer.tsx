@@ -78,14 +78,37 @@ export function LatexPDFViewer({ pdf, fileName = 'document.pdf' }: LatexPDFViewe
       return
     }
 
+    // Validate PDF data is a proper Uint8Array with content
+    if (!(pdf instanceof Uint8Array) || pdf.byteLength === 0) {
+      setError('Invalid PDF data received')
+      setIsLoading(false)
+      return
+    }
+
+    // Check for valid PDF header (%PDF-)
+    const header = String.fromCharCode(pdf[0], pdf[1], pdf[2], pdf[3], pdf[4])
+    if (!header.startsWith('%PDF')) {
+      setError('Invalid PDF format - missing PDF header')
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
     loadPdfJs()
       .then((pdfjs) => {
-        return pdfjs.getDocument({ data: pdf }).promise
+        if (!pdfjs || !pdfjs.getDocument) {
+          throw new Error('PDF.js library failed to load')
+        }
+        // Create a copy of the data to ensure it's not a detached buffer
+        const pdfData = new Uint8Array(pdf)
+        return pdfjs.getDocument({ data: pdfData }).promise
       })
       .then((doc) => {
+        if (!doc || typeof doc.numPages !== 'number') {
+          throw new Error('Invalid PDF document')
+        }
         setPdfDoc(doc)
         setTotalPages(doc.numPages)
         setCurrentPage(1)
@@ -98,6 +121,7 @@ export function LatexPDFViewer({ pdf, fileName = 'document.pdf' }: LatexPDFViewe
         }
       })
       .catch((err) => {
+        console.error('PDF loading error:', err)
         setError(err instanceof Error ? err.message : 'Failed to load PDF')
         setIsLoading(false)
       })
@@ -173,21 +197,36 @@ export function LatexPDFViewer({ pdf, fileName = 'document.pdf' }: LatexPDFViewe
     if (!pdfDoc || !canvasRef.current) return
 
     try {
-      const page = await pdfDoc.getPage(currentPage)
+      // Validate page number
+      const pageNum = Math.max(1, Math.min(currentPage, pdfDoc.numPages || 1))
+
+      const page = await pdfDoc.getPage(pageNum)
+      if (!page || !page.getViewport) {
+        throw new Error('Failed to get PDF page')
+      }
+
       const viewport = page.getViewport({ scale, rotation })
+      if (!viewport || !viewport.width || !viewport.height) {
+        throw new Error('Invalid viewport dimensions')
+      }
 
       const canvas = canvasRef.current
       const context = canvas.getContext('2d')
-      if (!context) return
+      if (!context) {
+        throw new Error('Failed to get canvas context')
+      }
 
       canvas.height = viewport.height
       canvas.width = viewport.width
 
-      await page.render({
+      const renderContext = {
         canvasContext: context,
         viewport
-      }).promise
+      }
+
+      await page.render(renderContext).promise
     } catch (err) {
+      console.error('Page render error:', err)
       setError(err instanceof Error ? err.message : 'Failed to render page')
     }
   }, [pdfDoc, currentPage, scale, rotation])
