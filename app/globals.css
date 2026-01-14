@@ -58,3 +58,29 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* SyncTeX highlight animation for Monaco editor */
+.synctex-highlight-line {
+  background-color: rgba(255, 255, 0, 0.3);
+  animation: synctex-pulse 2s ease-out;
+}
+
+.synctex-highlight-glyph {
+  background-color: rgba(255, 200, 0, 0.8);
+  width: 4px !important;
+  margin-left: 3px;
+  border-radius: 2px;
+  animation: synctex-pulse 2s ease-out;
+}
+
+@keyframes synctex-pulse {
+  0% {
+    background-color: rgba(255, 255, 0, 0.5);
+  }
+  50% {
+    background-color: rgba(255, 255, 0, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}

@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AppShell } from "@/components/layout/app-shell";
+import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "JSONLens - See JSON clearly. Diagram instantly.",
-  description: "A powerful JSON visualization tool for developers and analysts",
+  title: "Research Workbench",
+  description: "BYOK research toolkit with LaTeX editor, paper reading, and AI tools",
 };
 
 export default function RootLayout({
@@ -24,7 +26,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <KeyboardShortcutsProvider>
+            <AppShell>{children}</AppShell>
+          </KeyboardShortcutsProvider>
         </ThemeProvider>
       </body>
     </html>
