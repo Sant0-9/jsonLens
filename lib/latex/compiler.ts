@@ -24,6 +24,7 @@ export type {
 export { parseCompilationLog } from './types'
 
 import type { CompilationResult, CompilerOptions } from './types'
+import { compileWithDocker, isDockerAvailable } from './docker-compiler'
 
 /**
  * Initialize the WebAssembly LaTeX compiler
@@ -252,6 +253,28 @@ function documentNeedsServer(content: string): boolean {
   ]
 
   return serverOnlyPatterns.some(pattern => pattern.test(content))
+}
+
+/**
+ * Auto-compile: Automatically uses Docker if available, falls back to online
+ * This is the recommended function - it just works without configuration
+ */
+export async function compileAuto(
+  content: string,
+  options: CompilerOptions = {}
+): Promise<CompilationResult> {
+  const engine = options.engine || 'pdflatex'
+
+  // Check if Docker is available
+  const dockerAvailable = await isDockerAvailable()
+
+  if (dockerAvailable) {
+    // Use Docker - best quality, supports everything
+    return compileWithDocker(content, { ...options, engine })
+  }
+
+  // Fall back to online API
+  return compileWithServer(content, { ...options, engine })
 }
 
 /**

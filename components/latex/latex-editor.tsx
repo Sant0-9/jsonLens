@@ -8,7 +8,7 @@ import { LatexPreview } from './latex-preview'
 import { SymbolPalette } from './symbol-palette'
 import { LatexPDFViewer } from './latex-pdf-viewer'
 import { CompilationLog } from './compilation-log'
-import { compile, CompilationError } from '@/lib/latex/compiler'
+import { compileAuto, CompilationError } from '@/lib/latex/compiler'
 
 export function LatexEditor() {
   const {
@@ -33,13 +33,14 @@ export function LatexEditor() {
   // Convert string errors to CompilationError objects
   const errors: CompilationError[] = compilationErrors.map((msg) => ({ message: msg }))
 
-  // Compile function
+  // Compile function - auto-detects Docker and uses it, falls back to online API
   const handleCompile = useCallback(async () => {
     setCompiling(true)
     setShowCompilationLog(true)
 
     try {
-      const result = await compile(content)
+      // Auto-compile: uses Docker if available, otherwise online API
+      const result = await compileAuto(content)
 
       setCompilationResult({
         success: result.success,

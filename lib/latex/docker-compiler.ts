@@ -1,14 +1,21 @@
 /**
- * Docker-based LaTeX Compiler
+ * Docker-based LaTeX Compiler (Client-side)
  *
- * Uses local Docker with texlive/texlive image for unlimited compilation.
- * Requires Docker to be installed and running.
+ * Uses local Docker with texlive/texlive:latest-full image for unlimited compilation.
+ * Requires Docker to be installed and running on the server.
  *
- * Usage: Compile complex documents without API limits
+ * Features:
+ * - Full TexLive support (TikZ, PGFPlots, forest, etc.)
+ * - Multi-pass compilation (biber, makeglossaries, makeindex)
+ * - shell-escape support for minted
+ * - No rate limits
  */
 
-import type { CompilationResult, CompilationError, CompilerOptions } from './compiler'
-import { parseCompilationLog } from './compiler'
+import type { CompilationResult, CompilationError, CompilerOptions } from './types'
+import { parseCompilationLog } from './types'
+
+// Default timeout for complex documents (3 minutes)
+const DEFAULT_DOCKER_TIMEOUT = 180000
 
 interface ProjectFile {
   name: string
@@ -55,7 +62,7 @@ export async function compileWithDocker(
       body: JSON.stringify({
         content,
         engine,
-        timeout: options.timeout || 120000
+        timeout: options.timeout || DEFAULT_DOCKER_TIMEOUT
       })
     })
 
@@ -123,7 +130,7 @@ export async function compileProjectWithDocker(
         })),
         mainFile,
         engine,
-        timeout: options.timeout || 120000
+        timeout: options.timeout || DEFAULT_DOCKER_TIMEOUT
       })
     })
 

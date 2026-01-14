@@ -83,7 +83,8 @@ export async function routeProjectCompilation(
 }
 
 /**
- * Try Docker compilation with fallback to online
+ * Compile with Docker - no fallback
+ * If user selected Docker, they want Docker. Show errors directly.
  */
 async function tryDockerWithFallback(
   content: string,
@@ -92,28 +93,28 @@ async function tryDockerWithFallback(
   // Check if Docker is available
   const dockerAvailable = await isDockerAvailable()
 
-  if (dockerAvailable) {
-    const result = await compileWithDocker(content, options)
-    if (result.success || !shouldFallback(result)) {
-      return result
+  if (!dockerAvailable) {
+    return {
+      success: false,
+      log: [
+        'Docker is not available.',
+        'Please ensure Docker Desktop is installed and running.',
+        'Then pull the TexLive image: docker pull texlive/texlive:latest-full'
+      ],
+      errors: [{
+        message: 'Docker is not available. Install Docker Desktop and pull texlive/texlive:latest-full'
+      }],
+      warnings: []
     }
-    // Docker failed, add fallback note and try online
-    console.warn('Docker compilation failed, falling back to online')
   }
 
-  // Fallback to online
-  const onlineResult = await compileWithLatexOnline(content, options)
-  if (!dockerAvailable) {
-    onlineResult.log = [
-      'Docker not available, using online compilation',
-      ...onlineResult.log
-    ]
-  }
-  return onlineResult
+  // Use Docker directly - no fallback
+  return compileWithDocker(content, options)
 }
 
 /**
- * Try Docker project compilation with fallback
+ * Compile project with Docker - no fallback
+ * If user selected Docker, they want Docker. Show errors directly.
  */
 async function tryDockerProjectWithFallback(
   files: ProjectFile[],
@@ -122,27 +123,28 @@ async function tryDockerProjectWithFallback(
 ): Promise<CompilationResult> {
   const dockerAvailable = await isDockerAvailable()
 
-  if (dockerAvailable) {
-    const result = await compileProjectWithDocker(files, mainFile, options)
-    if (result.success || !shouldFallback(result)) {
-      return result
+  if (!dockerAvailable) {
+    return {
+      success: false,
+      log: [
+        'Docker is not available.',
+        'Please ensure Docker Desktop is installed and running.',
+        'Then pull the TexLive image: docker pull texlive/texlive:latest-full'
+      ],
+      errors: [{
+        message: 'Docker is not available. Install Docker Desktop and pull texlive/texlive:latest-full'
+      }],
+      warnings: []
     }
-    console.warn('Docker compilation failed, falling back to online')
   }
 
-  // Fallback to online
-  const onlineResult = await compileProjectWithLatexOnline(files, mainFile, options)
-  if (!dockerAvailable) {
-    onlineResult.log = [
-      'Docker not available, using online compilation',
-      ...onlineResult.log
-    ]
-  }
-  return onlineResult
+  // Use Docker directly - no fallback
+  return compileProjectWithDocker(files, mainFile, options)
 }
 
 /**
- * Try remote server compilation with fallback
+ * Compile with remote server - no fallback
+ * If user selected remote, they want remote. Show errors if URL not configured.
  */
 async function tryRemoteWithFallback(
   content: string,
@@ -151,27 +153,27 @@ async function tryRemoteWithFallback(
 ): Promise<CompilationResult> {
   const remoteUrl = settings?.remoteUrl
 
-  if (remoteUrl) {
-    const result = await compileWithRemote(content, options, remoteUrl)
-    if (result.success || !shouldFallback(result)) {
-      return result
+  if (!remoteUrl) {
+    return {
+      success: false,
+      log: [
+        'Remote server URL not configured.',
+        'Go to Settings > Compilation and enter your TexLive server URL.'
+      ],
+      errors: [{
+        message: 'Remote server URL not configured. Configure it in Settings.'
+      }],
+      warnings: []
     }
-    console.warn('Remote compilation failed, falling back to online')
   }
 
-  // Fallback to online
-  const onlineResult = await compileWithLatexOnline(content, options)
-  if (!remoteUrl) {
-    onlineResult.log = [
-      'Remote URL not configured, using online compilation',
-      ...onlineResult.log
-    ]
-  }
-  return onlineResult
+  // Use remote directly - no fallback
+  return compileWithRemote(content, options, remoteUrl)
 }
 
 /**
- * Try remote project compilation with fallback
+ * Compile project with remote server - no fallback
+ * If user selected remote, they want remote. Show errors if URL not configured.
  */
 async function tryRemoteProjectWithFallback(
   files: ProjectFile[],
@@ -181,23 +183,22 @@ async function tryRemoteProjectWithFallback(
 ): Promise<CompilationResult> {
   const remoteUrl = settings?.remoteUrl
 
-  if (remoteUrl) {
-    const result = await compileProjectWithRemote(files, mainFile, options, remoteUrl)
-    if (result.success || !shouldFallback(result)) {
-      return result
+  if (!remoteUrl) {
+    return {
+      success: false,
+      log: [
+        'Remote server URL not configured.',
+        'Go to Settings > Compilation and enter your TexLive server URL.'
+      ],
+      errors: [{
+        message: 'Remote server URL not configured. Configure it in Settings.'
+      }],
+      warnings: []
     }
-    console.warn('Remote compilation failed, falling back to online')
   }
 
-  // Fallback to online
-  const onlineResult = await compileProjectWithLatexOnline(files, mainFile, options)
-  if (!remoteUrl) {
-    onlineResult.log = [
-      'Remote URL not configured, using online compilation',
-      ...onlineResult.log
-    ]
-  }
-  return onlineResult
+  // Use remote directly - no fallback
+  return compileProjectWithRemote(files, mainFile, options, remoteUrl)
 }
 
 /**
@@ -327,36 +328,9 @@ async function compileProjectWithRemote(
   }
 }
 
-/**
- * Determine if we should fallback to another compiler
- * Don't fallback for LaTeX errors (those are user errors, not system errors)
- */
-function shouldFallback(result: CompilationResult): boolean {
-  // If there are LaTeX errors (syntax, packages, etc.), don't fallback
-  // These errors would occur with any compiler
-  const hasLatexErrors = result.errors.some(e =>
-    e.message.includes('LaTeX Error') ||
-    e.message.includes('Undefined control sequence') ||
-    e.message.includes('Missing') ||
-    e.message.includes('Extra') ||
-    e.line !== undefined
-  )
-
-  if (hasLatexErrors) {
-    return false
-  }
-
-  // Fallback for system/network errors
-  const hasSystemErrors = result.errors.some(e =>
-    e.message.includes('Docker') ||
-    e.message.includes('not available') ||
-    e.message.includes('Network') ||
-    e.message.includes('timeout') ||
-    e.message.includes('Connection')
-  )
-
-  return hasSystemErrors
-}
+// Note: Fallback behavior has been removed.
+// If user selects Docker, they get Docker - errors are shown directly.
+// If user selects Remote, they get Remote - with clear error if URL not configured.
 
 /**
  * Get available compilation methods
