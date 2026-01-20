@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronUp, X, AlertCircle, AlertTriangle, CheckCircle, Copy } from 'lucide-react'
+import { ChevronDown, ChevronUp, X, AlertCircle, AlertTriangle, CheckCircle, Copy, GripHorizontal } from 'lucide-react'
 import { CompilationError } from '@/lib/latex/compiler'
 
 interface CompilationLogProps {
@@ -24,7 +24,47 @@ export function CompilationLog({
 }: CompilationLogProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [activeTab, setActiveTab] = useState<'log' | 'errors' | 'warnings'>('log')
+  const [panelHeight, setPanelHeight] = useState(192) // Default h-48 = 192px
+  const [isResizing, setIsResizing] = useState(false)
   const logContainerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Handle vertical resize
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !panelRef.current) return
+
+      const panelRect = panelRef.current.getBoundingClientRect()
+      // Calculate new height based on distance from bottom of panel to mouse
+      const newHeight = panelRect.bottom - e.clientY
+
+      // Clamp between 100px and 600px
+      setPanelHeight(Math.min(600, Math.max(100, newHeight)))
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'row-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing])
 
   // Auto-scroll to bottom when new log entries arrive
   useEffect(() => {
@@ -68,7 +108,16 @@ export function CompilationLog({
   }
 
   return (
-    <div className="border-t bg-background">
+    <div ref={panelRef} className="border-t bg-background">
+      {/* Resize Handle */}
+      <div
+        className="h-2 bg-border hover:bg-primary/50 cursor-row-resize flex items-center justify-center transition-colors group"
+        onMouseDown={handleResizeStart}
+        title="Drag to resize"
+      >
+        <GripHorizontal className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+      </div>
+
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-2 border-b bg-muted/50 cursor-pointer"
@@ -183,7 +232,8 @@ export function CompilationLog({
       {isExpanded && (
         <div
           ref={logContainerRef}
-          className="h-48 overflow-auto font-mono text-xs p-4 bg-muted/20"
+          className="overflow-auto font-mono text-xs p-4 bg-muted/20"
+          style={{ height: `${panelHeight}px` }}
         >
           {activeTab === 'log' && (
             <div className="space-y-0.5">

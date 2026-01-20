@@ -411,7 +411,7 @@ export function LatexPDFViewer({ pdf, fileName = 'document.pdf' }: LatexPDFViewe
       {/* PDF Canvas */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 p-4"
+        className="flex-1 overflow-auto bg-muted p-4"
       >
         <div className="flex justify-center">
           <div className="relative">

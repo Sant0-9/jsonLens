@@ -78,7 +78,8 @@ export async function compileWithServer(
         content,
         engine: options.engine || 'pdflatex',
         format: options.outputFormat || 'pdf',
-        timeout: options.timeout || 60000
+        timeout: options.timeout || 60000,
+        checkOnly: options.checkOnly || false
       })
     })
 
@@ -190,6 +191,7 @@ export async function compileWithSettings(
         engine: options.engine || settings?.defaultEngine || 'pdflatex',
         format: options.outputFormat || 'pdf',
         timeout: options.timeout || 60000,
+        checkOnly: options.checkOnly || false,
         settings
       })
     })

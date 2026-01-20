@@ -24,6 +24,8 @@ interface DockerCompileRequest {
   mainFile?: string
   engine?: 'pdflatex' | 'xelatex' | 'lualatex'
   timeout?: number
+  /** When true, only checks for errors without generating full PDF (faster) */
+  checkOnly?: boolean
 }
 
 interface CompilationPlan {
@@ -89,8 +91,9 @@ function analyzeDocument(content: string, engine: string): CompilationPlan {
 
 /**
  * Build the multi-pass compilation script
+ * When checkOnly is true, only runs a single pass for error checking (faster)
  */
-function buildCompilationScript(mainFile: string, plan: CompilationPlan): string {
+function buildCompilationScript(mainFile: string, plan: CompilationPlan, checkOnly: boolean = false): string {
   const baseFile = mainFile.replace('.tex', '')
   const engineFlags = plan.needsShellEscape
     ? '-shell-escape -interaction=nonstopmode -file-line-error'
@@ -100,6 +103,11 @@ function buildCompilationScript(mainFile: string, plan: CompilationPlan): string
 
   // Pass 1: Initial compilation (generates .aux, .bcf, .glo, .idx files)
   commands.push(`${plan.engine} ${engineFlags} ${mainFile}`)
+
+  // If checkOnly, skip multi-pass compilation (just check for errors)
+  if (checkOnly) {
+    return commands.join(' && ')
+  }
 
   // Bibliography processing
   if (plan.needsBiber) {
@@ -145,7 +153,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<DockerCom
       files,
       mainFile = 'main.tex',
       engine = 'pdflatex',
-      timeout = DEFAULT_TIMEOUT
+      timeout = DEFAULT_TIMEOUT,
+      checkOnly = false
     } = body
 
     // Validate input
@@ -211,8 +220,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<DockerCom
     // Analyze document and build compilation plan
     const plan = analyzeDocument(mainContent, engine)
 
-    // Build compilation script
-    const script = buildCompilationScript(mainFile, plan)
+    // Build compilation script (checkOnly = single pass, no auxiliary tools)
+    const script = buildCompilationScript(mainFile, plan, checkOnly)
 
     // Build Docker command
     // --rm: Remove container after execution
@@ -268,25 +277,37 @@ export async function POST(request: NextRequest): Promise<NextResponse<DockerCom
     // Parse log for errors and warnings
     const { errors, warnings } = parseCompilationLog(fullLog)
 
-    // Try to read compiled PDF
-    const pdfPath = path.join(tempDir, mainFile.replace('.tex', '.pdf'))
+    // Try to read compiled PDF (skip if checkOnly - saves time and bandwidth)
     let pdfBase64: string | undefined
+    let pdfExists = false
 
-    try {
-      const pdfBuffer = await fs.readFile(pdfPath)
-      pdfBase64 = pdfBuffer.toString('base64')
-    } catch {
-      // PDF not generated - compilation failed
+    if (!checkOnly) {
+      const pdfPath = path.join(tempDir, mainFile.replace('.tex', '.pdf'))
+      try {
+        const pdfBuffer = await fs.readFile(pdfPath)
+        pdfBase64 = pdfBuffer.toString('base64')
+        pdfExists = true
+      } catch {
+        // PDF not generated - compilation failed
+      }
+    } else {
+      // For checkOnly, just verify PDF file exists (don't read it)
+      const pdfPath = path.join(tempDir, mainFile.replace('.tex', '.pdf'))
+      try {
+        await fs.access(pdfPath)
+        pdfExists = true
+      } catch {
+        // PDF not generated
+      }
     }
 
     // Determine success
-    // Success = PDF exists AND no fatal errors
-    const hasFatalErrors = errors.some(e =>
-      e.message.includes('Fatal error') ||
-      e.message.includes('Emergency stop') ||
-      e.message.includes('No pages of output')
-    )
-    const success = !!pdfBase64 && !hasFatalErrors
+    // For checkOnly: success = no fatal errors (PDF may exist)
+    // For full build: success = PDF exists with content
+    // We prioritize the PDF existing over error messages because:
+    // - Multi-pass compilation may have errors in later passes but still produce valid PDF
+    // - minted/fancyvrb can cause issues in subsequent passes but first pass PDF is valid
+    const success = checkOnly ? (errors.length === 0 || pdfExists) : !!pdfBase64
 
     return NextResponse.json({
       success,

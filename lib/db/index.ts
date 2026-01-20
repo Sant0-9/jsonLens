@@ -3,8 +3,28 @@ import { DB_NAME, DB_VERSION, STORES } from './schema'
 
 let dbInstance: IDBDatabase | null = null
 
+// Reset database connection (useful when schema changes)
+export function resetDBConnection(): void {
+  if (dbInstance) {
+    dbInstance.close()
+    dbInstance = null
+  }
+}
+
 export async function openDB(): Promise<IDBDatabase> {
-  if (dbInstance) return dbInstance
+  // Check if existing connection has all required stores
+  if (dbInstance) {
+    const allStoresExist = Object.values(STORES).every(
+      store => dbInstance!.objectStoreNames.contains(store)
+    )
+    if (!allStoresExist) {
+      // Close stale connection and re-open
+      dbInstance.close()
+      dbInstance = null
+    } else {
+      return dbInstance
+    }
+  }
 
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
@@ -79,8 +99,17 @@ export async function openDB(): Promise<IDBDatabase> {
   })
 }
 
+// Helper to check if store exists
+function storeExists(db: IDBDatabase, storeName: string): boolean {
+  return db.objectStoreNames.contains(storeName)
+}
+
 export async function get<T>(storeName: string, key: string): Promise<T | undefined> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return undefined
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly')
     const store = transaction.objectStore(storeName)
@@ -93,6 +122,10 @@ export async function get<T>(storeName: string, key: string): Promise<T | undefi
 
 export async function getAll<T>(storeName: string): Promise<T[]> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return []
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly')
     const store = transaction.objectStore(storeName)
@@ -105,6 +138,10 @@ export async function getAll<T>(storeName: string): Promise<T[]> {
 
 export async function put<T>(storeName: string, value: T): Promise<void> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readwrite')
     const store = transaction.objectStore(storeName)
@@ -117,6 +154,10 @@ export async function put<T>(storeName: string, value: T): Promise<void> {
 
 export async function remove(storeName: string, key: string): Promise<void> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readwrite')
     const store = transaction.objectStore(storeName)
@@ -129,6 +170,10 @@ export async function remove(storeName: string, key: string): Promise<void> {
 
 export async function clear(storeName: string): Promise<void> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readwrite')
     const store = transaction.objectStore(storeName)
@@ -145,6 +190,10 @@ export async function getAllByIndex<T>(
   query: IDBValidKey | IDBKeyRange
 ): Promise<T[]> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return []
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly')
     const store = transaction.objectStore(storeName)
@@ -158,6 +207,10 @@ export async function getAllByIndex<T>(
 
 export async function count(storeName: string): Promise<number> {
   const db = await openDB()
+  if (!storeExists(db, storeName)) {
+    console.warn(`Store "${storeName}" not found. Try refreshing the page.`)
+    return 0
+  }
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly')
     const store = transaction.objectStore(storeName)

@@ -14,6 +14,8 @@ interface CompileRequest {
   format?: 'pdf' | 'dvi'
   timeout?: number
   settings?: Settings['compilation']
+  /** When true, only checks for errors without generating full PDF */
+  checkOnly?: boolean
 }
 
 interface CompilationError {
@@ -42,7 +44,7 @@ interface CompileResponse {
 export async function POST(request: NextRequest): Promise<NextResponse<CompileResponse>> {
   try {
     const body: CompileRequest = await request.json()
-    const { content, files, mainFile, engine = 'pdflatex', timeout = 60000, settings } = body
+    const { content, files, mainFile, engine = 'pdflatex', timeout = 60000, settings, checkOnly = false } = body
 
     // Validate: need either content (single file) or files (multi-file project)
     const isSingleFile = content && typeof content === 'string'
@@ -105,21 +107,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<CompileRe
       result = await routeProjectCompilation(
         projectFiles,
         mainFile || 'main.tex',
-        { engine, timeout },
+        { engine, timeout, checkOnly },
         settings
       )
     } else {
       // Single file compilation
       result = await routeCompilation(
         content!,
-        { engine, timeout },
+        { engine, timeout, checkOnly },
         settings
       )
     }
 
-    // Encode PDF as base64 for JSON response
+    // Encode PDF as base64 for JSON response (skip if checkOnly)
     let pdfBase64: string | undefined
-    if (result.pdf) {
+    if (result.pdf && !checkOnly) {
       const binaryString = Array.from(result.pdf)
         .map(byte => String.fromCharCode(byte))
         .join('')

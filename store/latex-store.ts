@@ -509,7 +509,7 @@ export const useLatexStore = create<LatexState>()(
       resetEditor: () => set(initialState),
     }),
     {
-      name: 'jsonlens-latex-storage',
+      name: 'research-workbench-latex-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         view: state.view,

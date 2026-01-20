@@ -20,7 +20,7 @@ export function LatexMonaco() {
     highlightPDFLocation,
     clearSyncTeXNavigation
   } = useLatexStore()
-  const { theme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
 
   // Handle PDF-to-source navigation (scroll to line when PDF is clicked)
@@ -218,7 +218,7 @@ export function LatexMonaco() {
         value={content}
         onChange={handleChange}
         onMount={handleEditorDidMount}
-        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+        theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'}
         options={{
           fontSize: editorFontSize,
           fontFamily: "'JetBrains Mono', 'Fira Code', monospace",

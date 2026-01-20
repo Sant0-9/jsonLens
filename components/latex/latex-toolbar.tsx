@@ -12,19 +12,24 @@ import {
   Download,
   Upload,
   Play,
+  Check,
   Settings,
   Home,
   Sun,
   Moon,
+  Terminal,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
 
 interface LatexToolbarProps {
+  onCheck?: () => void
   onCompile?: () => void
+  showCompilationLog?: boolean
+  onToggleLog?: () => void
 }
 
-export function LatexToolbar({ onCompile }: LatexToolbarProps) {
+export function LatexToolbar({ onCheck, onCompile, showCompilationLog, onToggleLog }: LatexToolbarProps) {
   const {
     view,
     setView,
@@ -154,6 +159,17 @@ export function LatexToolbar({ onCompile }: LatexToolbarProps) {
         <div className="h-6 w-px bg-border" />
 
         <Button
+          variant="outline"
+          size="sm"
+          disabled={isCompiling}
+          onClick={onCheck}
+          title="Check for errors (no PDF)"
+        >
+          <Check className="h-4 w-4" />
+          <span className="ml-1 hidden sm:inline">Check</span>
+        </Button>
+
+        <Button
           variant="default"
           size="sm"
           disabled={isCompiling}
@@ -162,8 +178,18 @@ export function LatexToolbar({ onCompile }: LatexToolbarProps) {
         >
           <Play className="h-4 w-4" />
           <span className="ml-1 hidden sm:inline">
-            {isCompiling ? 'Compiling...' : 'Compile'}
+            {isCompiling ? 'Building...' : 'Build PDF'}
           </span>
+        </Button>
+
+        <Button
+          variant={showCompilationLog ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={onToggleLog}
+          title="Toggle Compilation Log"
+        >
+          <Terminal className="h-4 w-4" />
+          <span className="ml-1 hidden md:inline">Log</span>
         </Button>
 
         <div className="h-6 w-px bg-border" />

@@ -23,6 +23,8 @@ export interface CompilerOptions {
   engine?: 'pdflatex' | 'xelatex' | 'lualatex'
   outputFormat?: 'pdf' | 'dvi'
   timeout?: number
+  /** When true, only checks for errors without generating PDF output (faster, saves storage) */
+  checkOnly?: boolean
 }
 
 /**

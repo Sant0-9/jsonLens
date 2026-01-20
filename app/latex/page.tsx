@@ -1,7 +1,7 @@
 import { LatexEditor } from '@/components/latex/latex-editor'
 
 export const metadata = {
-  title: 'LaTeX Editor | jsonLens',
+  title: 'LaTeX Editor | Research Workbench',
   description: 'Full-featured LaTeX editor with live preview and PDF compilation',
 }
 

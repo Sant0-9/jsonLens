@@ -62,7 +62,8 @@ export async function compileWithDocker(
       body: JSON.stringify({
         content,
         engine,
-        timeout: options.timeout || DEFAULT_DOCKER_TIMEOUT
+        timeout: options.timeout || DEFAULT_DOCKER_TIMEOUT,
+        checkOnly: options.checkOnly || false
       })
     })
 

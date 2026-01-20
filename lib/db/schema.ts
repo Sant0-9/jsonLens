@@ -2,7 +2,7 @@
 // Database: research-workbench
 
 export const DB_NAME = 'research-workbench'
-export const DB_VERSION = 3
+export const DB_VERSION = 4
 
 // Store names
 export const STORES = {

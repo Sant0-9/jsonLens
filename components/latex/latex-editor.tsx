@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { useLatexStore } from '@/store/latex-store'
 import { LatexToolbar } from './latex-toolbar'
 import { LatexMonaco } from './latex-monaco'
@@ -29,31 +29,65 @@ export function LatexEditor() {
   } = useLatexStore()
 
   const [showCompilationLog, setShowCompilationLog] = useState(false)
+  const [splitRatio, setSplitRatio] = useState(50) // percentage for left panel
+  const [isResizing, setIsResizing] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Handle split panel resize
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !containerRef.current) return
+
+      const rect = containerRef.current.getBoundingClientRect()
+      const newRatio = ((e.clientX - rect.left) / rect.width) * 100
+
+      // Clamp between 20% and 80%
+      setSplitRatio(Math.min(80, Math.max(20, newRatio)))
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing])
 
   // Convert string errors to CompilationError objects
   const errors: CompilationError[] = compilationErrors.map((msg) => ({ message: msg }))
 
-  // Compile function - auto-detects Docker and uses it, falls back to online API
-  const handleCompile = useCallback(async () => {
+  // Check function - validates LaTeX without generating PDF (faster, no storage)
+  const handleCheck = useCallback(async () => {
     setCompiling(true)
     setShowCompilationLog(true)
 
     try {
-      // Auto-compile: uses Docker if available, otherwise online API
-      const result = await compileAuto(content)
+      // Check-only mode: runs compilation but doesn't store PDF
+      const result = await compileAuto(content, { checkOnly: true })
 
       setCompilationResult({
         success: result.success,
-        pdf: result.pdf || null,
+        pdf: null, // Don't store PDF for check-only
         log: result.log,
         errors: result.errors.map((e) => e.message),
         warnings: result.warnings,
       })
-
-      // Switch to PDF view if compilation was successful
-      if (result.success && result.pdf) {
-        setView('pdf')
-      }
     } catch (error) {
       setCompilationResult({
         success: false,
@@ -63,7 +97,34 @@ export function LatexEditor() {
         warnings: [],
       })
     }
-  }, [content, setCompiling, setCompilationResult, setView])
+  }, [content, setCompiling, setCompilationResult])
+
+  // Compile function - generates PDF output
+  const handleCompile = useCallback(async () => {
+    setCompiling(true)
+    setShowCompilationLog(true)
+
+    try {
+      const result = await compileAuto(content)
+
+      setCompilationResult({
+        success: result.success,
+        pdf: result.pdf || null,
+        log: result.log,
+        errors: result.errors.map((e) => e.message),
+        warnings: result.warnings,
+      })
+      // Note: Don't auto-switch to PDF view - let user decide
+    } catch (error) {
+      setCompilationResult({
+        success: false,
+        pdf: null,
+        log: [`Error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        errors: [error instanceof Error ? error.message : 'Compilation failed'],
+        warnings: [],
+      })
+    }
+  }, [content, setCompiling, setCompilationResult])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -128,20 +189,40 @@ export function LatexEditor() {
 
   return (
     <div className="flex flex-col h-full">
-      <LatexToolbar onCompile={handleCompile} />
+      <LatexToolbar
+        onCheck={handleCheck}
+        onCompile={handleCompile}
+        showCompilationLog={showCompilationLog}
+        onToggleLog={() => setShowCompilationLog(!showCompilationLog)}
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 flex overflow-hidden relative">
+        <div ref={containerRef} className="flex-1 flex overflow-hidden relative">
           {/* Editor Pane */}
           {(view === 'split' || view === 'editor') && (
-            <div className={`flex flex-col ${view === 'split' ? 'w-1/2 border-r' : 'w-full'}`}>
+            <div
+              className="flex flex-col overflow-hidden"
+              style={{ width: view === 'split' ? `${splitRatio}%` : '100%' }}
+            >
               <LatexMonaco />
             </div>
           )}
 
+          {/* Resize Handle */}
+          {view === 'split' && (
+            <div
+              className="w-1 bg-border hover:bg-primary/50 cursor-col-resize flex-shrink-0 transition-colors"
+              onMouseDown={handleMouseDown}
+              title="Drag to resize"
+            />
+          )}
+
           {/* Preview Pane */}
           {(view === 'split' || view === 'preview') && (
-            <div className={`flex flex-col ${view === 'split' ? 'w-1/2' : 'w-full'}`}>
+            <div
+              className="flex flex-col overflow-hidden"
+              style={{ width: view === 'split' ? `${100 - splitRatio}%` : '100%' }}
+            >
               <LatexPreview />
             </div>
           )}
